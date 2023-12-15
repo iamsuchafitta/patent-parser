@@ -1,0 +1,20 @@
+{
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "tsConfigPath": "tsconfig.build.json",
+    "plugins": [
+      {
+        "name": "@nestjs/graphql",
+        "options": {
+          "introspectComments": true,
+          "typeFileNameSuffix": [".input.ts", ".args.ts", ".entity.ts", ".model.ts", ".object.ts"]
+        }
+      }
+    ]
+  },
+  "generateOptions": {
+    "spec": false
+  }
+}

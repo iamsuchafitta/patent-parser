@@ -1,0 +1,6 @@
+query QueueLength {
+  queueLength {
+    total
+    processing
+  }
+}

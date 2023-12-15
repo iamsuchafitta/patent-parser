@@ -1,0 +1,32 @@
+name: patent-parser-dev
+
+services:
+  patent-parser-1:
+    container_name: patent-parser-1
+    build:
+      context: ..
+      dockerfile: patent-parser.puppeteer.Dockerfile
+    depends_on:
+      - database
+      - tor-privoxy
+    env_file: ../.env
+    environment:
+      PROXY_HOST: tor-privoxy
+      DATABASE_URL: postgresql://dev:dev@database:5432/dev?schema=public
+    ports:
+      - 5001:5000
+
+  patent-parser-2:
+    container_name: patent-parser-2
+    build:
+      context: ..
+      dockerfile: patent-parser.puppeteer.Dockerfile
+    depends_on:
+      - database
+      - tor-privoxy
+    env_file: ../.env
+    environment:
+      PROXY_HOST: tor-privoxy
+      DATABASE_URL: postgresql://dev:dev@database:5432/dev?schema=public
+    ports:
+      - 5002:5000

@@ -1,0 +1,9 @@
+schema: ./schema.gql
+documents: ./gqls/**/*.{gql,graphql}
+extensions:
+  endpoints:
+    backend:
+      url: http://localhost:5000/graphql
+      headers:
+        user-agent: JS GraphQL
+      introspect: true

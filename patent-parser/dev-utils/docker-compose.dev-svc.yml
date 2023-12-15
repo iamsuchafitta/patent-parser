@@ -1,0 +1,71 @@
+name: patent-parser-dev
+
+services:
+
+  database:
+    image: postgres:15-alpine
+    container_name: patent-parser-db-dev
+    ports:
+      - 5432:5432
+    volumes:
+      - ./dev-data-database:/var/lib/postgresql/data
+      - ./backups:/opt/backups
+    environment:
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: dev
+#    healthcheck:
+#      test: ["CMD", "pg_isready"]
+#      start_period: 1s
+#      start_interval: 1s
+
+  tor-privoxy:
+    image: dockage/tor-privoxy:latest
+    volumes:
+      - ./torrc:/etc/tor/torrc
+    ports:
+      - 9020:9020
+      - 9021:9021
+      - 9022:9022
+      - 9023:9023
+      - 9024:9024
+      - 9025:9025
+      - 9026:9026
+      - 9027:9027
+      - 9028:9028
+      - 9029:9029
+      - 9030:9030
+      - 9031:9031
+      - 9032:9032
+      - 9033:9033
+      - 9034:9034
+      - 9035:9035
+      - 9036:9036
+      - 9037:9037
+      - 9038:9038
+      - 9039:9039
+      - 9040:9040
+      - 9041:9041
+      - 9042:9042
+      - 9043:9043
+      - 9044:9044
+      - 9045:9045
+      - 9046:9046
+      - 9047:9047
+      - 9048:9048
+      - 9049:9049
+
+#      - 9050:9050
+      - 9051:9051
+#      - 8118:8118
+
+#  tor:
+#    container_name: tor
+#    image: dockurr/tor:latest
+#    ports:
+#      - 9050:9050
+#      - 9051:9051
+#    volumes:
+#      - ./tor/config:/etc/tor
+#      - ./tor/data:/var/lib/tor
+#    stop_grace_period: 1m

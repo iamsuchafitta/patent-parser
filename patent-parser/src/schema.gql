@@ -1,0 +1,274 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type ApplicationEventCountAggregate {
+  id: Int!
+  date: Int!
+  asignee: Int!
+  inventors: Int!
+  _all: Int!
+}
+
+type ApplicationEventMaxAggregate {
+  id: String
+  date: DateTime
+  asignee: String
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type ApplicationEventMinAggregate {
+  id: String
+  date: DateTime
+  asignee: String
+}
+
+type ConceptAvgAggregate {
+  queryMatch: Float
+  count: Float
+}
+
+type ConceptCountAggregate {
+  id: Int!
+  name: Int!
+  domain: Int!
+  smiles: Int!
+  inchiKey: Int!
+  queryMatch: Int!
+  sections: Int!
+  count: Int!
+  patentNumber: Int!
+  _all: Int!
+}
+
+type ConceptMaxAggregate {
+  id: String
+  name: String
+  domain: String
+  smiles: String
+  inchiKey: String
+  queryMatch: Float
+  count: Int
+  patentNumber: String
+}
+
+type ConceptMinAggregate {
+  id: String
+  name: String
+  domain: String
+  smiles: String
+  inchiKey: String
+  queryMatch: Float
+  count: Int
+  patentNumber: String
+}
+
+type ConceptSumAggregate {
+  queryMatch: Float
+  count: Int
+}
+
+"""Концепт"""
+type Concept {
+  id: ID!
+  name: String!
+  domain: String!
+  smiles: String
+  inchiKey: String
+  queryMatch: Float!
+  sections: [String!]
+  count: Int!
+  patentNumber: String
+  Patent: Patent
+}
+
+type PatentCountAggregate {
+  id: Int!
+  urlGoogle: Int!
+  urlYandex: Int!
+  title: Int!
+  abstract: Int!
+  description: Int!
+  classifications: Int!
+  claims: Int!
+  _all: Int!
+}
+
+type PatentCount {
+  concepts: Int!
+  relations: Int!
+}
+
+type PatentMaxAggregate {
+  id: String
+  urlGoogle: String
+  urlYandex: String
+  title: String
+  abstract: String
+  description: String
+}
+
+type PatentMinAggregate {
+  id: String
+  urlGoogle: String
+  urlYandex: String
+  title: String
+  abstract: String
+  description: String
+}
+
+"""Патент"""
+type Patent {
+  """Номер патента"""
+  id: ID!
+
+  """Ссылка на патент в Google Patents"""
+  urlGoogle: String
+
+  """Ссылка на патент в Yandex Patents"""
+  urlYandex: String
+
+  """Название патента"""
+  title: String
+
+  """Краткое описание"""
+  abstract: String
+
+  """Полное описание"""
+  description: String
+
+  """
+  Области технологий, классификации по патентным системам (например, IPC или CPC)
+  """
+  classifications: JSON
+
+  """Пункты формулы изобретения"""
+  claims: JSON
+
+  """Концепты"""
+  concepts: [Concept!]
+
+  """Ссылки на другие патенты"""
+  relations: [PatentRelation!]
+  _count: PatentCount!
+}
+
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON
+
+type PatentParseQueueAvgAggregate {
+  tries: Float
+}
+
+type PatentParseQueueCountAggregate {
+  url: Int!
+  startedAt: Int!
+  tries: Int!
+  createdAt: Int!
+  updatedAt: Int!
+  _all: Int!
+}
+
+type PatentParseQueueMaxAggregate {
+  url: String
+  startedAt: DateTime
+  tries: Int
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+type PatentParseQueueMinAggregate {
+  url: String
+  startedAt: DateTime
+  tries: Int
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+type PatentParseQueueSumAggregate {
+  tries: Int
+}
+
+type PatentRelationCountAggregate {
+  patentMainId: Int!
+  type: Int!
+  patentOtherId: Int!
+  _all: Int!
+}
+
+type PatentRelationMaxAggregate {
+  patentMainId: String
+  type: PatentRelationTypeEnum
+  patentOtherId: String
+}
+
+"""Тип связи от первого патента ко второму"""
+enum PatentRelationTypeEnum {
+  Citation
+  CitationFamilyToFamily
+  CitedBy
+  CitedByFamilyToFamily
+  Worldwide
+  SimilarDocument
+}
+
+type PatentRelationMinAggregate {
+  patentMainId: String
+  type: PatentRelationTypeEnum
+  patentOtherId: String
+}
+
+"""Связь между патентами"""
+type PatentRelation {
+  """Первый патент"""
+  patentMainId: String!
+
+  """Тип связи"""
+  type: PatentRelationTypeEnum!
+
+  """Второй патент (может отсутствовать в БД)"""
+  patentOtherId: String!
+
+  """Первый патент"""
+  patentMain: Patent!
+}
+
+type QueueLengthObject {
+  """Сколько всего элементов в очереди"""
+  total: Float!
+
+  """Сколько из них сейчас обрабатываются"""
+  processing: Float!
+}
+
+type Query {
+  healthz(db: Boolean): String!
+  patents(search: String, pagination: PaginationInput! = {skip: 0, take: 10}): [Patent!]!
+  patentsCount: Int!
+  patent(id: String!): Patent!
+  queueLength: QueueLengthObject!
+}
+
+input PaginationInput {
+  skip: Float! = 0
+  take: Float! = 10
+}
+
+type Mutation {
+  """Parse patent"""
+  patentParse(patentUrl: URL!): String!
+
+  """Add patents to parse queue by search"""
+  patentsSearch(search: String!, isOrganisation: Boolean! = false, isIgnoreExisting: Boolean! = true): Int!
+}
+
+"""
+A field whose value conforms to the standard URL format as specified in RFC3986: https://www.ietf.org/rfc/rfc3986.txt.
+"""
+scalar URL
