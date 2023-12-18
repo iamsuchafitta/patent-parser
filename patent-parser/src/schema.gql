@@ -86,6 +86,136 @@ type Concept {
   Patent: Patent
 }
 
+type MonitorLogCountAggregate {
+  id: Int!
+  parserId: Int!
+  createdAt: Int!
+  type: Int!
+  message: Int!
+  _all: Int!
+}
+
+type MonitorLogMaxAggregate {
+  id: String
+  parserId: String
+  createdAt: DateTime
+  type: MonitorLogTypeEnum
+  message: String
+}
+
+enum MonitorLogTypeEnum {
+  Info
+  Warning
+  Error
+}
+
+type MonitorLogMinAggregate {
+  id: String
+  parserId: String
+  createdAt: DateTime
+  type: MonitorLogTypeEnum
+  message: String
+}
+
+type MonitorLog {
+  id: ID!
+  parserId: String!
+  createdAt: DateTime!
+  type: MonitorLogTypeEnum!
+  message: String!
+}
+
+type MonitorStatAvgAggregate {
+  currentProcessing: Float
+  errors: Float
+  errorsMax: Float
+  rssMb: Float
+  heapMb: Float
+  heapMaxMb: Float
+  externalMb: Float
+  sighup: Float
+  sigint: Float
+  sigterm: Float
+}
+
+type MonitorStatCountAggregate {
+  id: Int!
+  parserId: Int!
+  createdAt: Int!
+  currentProcessing: Int!
+  errors: Int!
+  errorsMax: Int!
+  rssMb: Int!
+  heapMb: Int!
+  heapMaxMb: Int!
+  externalMb: Int!
+  sighup: Int!
+  sigint: Int!
+  sigterm: Int!
+  _all: Int!
+}
+
+type MonitorStatMaxAggregate {
+  id: String
+  parserId: String
+  createdAt: DateTime
+  currentProcessing: Int
+  errors: Int
+  errorsMax: Int
+  rssMb: Float
+  heapMb: Float
+  heapMaxMb: Float
+  externalMb: Float
+  sighup: Int
+  sigint: Int
+  sigterm: Int
+}
+
+type MonitorStatMinAggregate {
+  id: String
+  parserId: String
+  createdAt: DateTime
+  currentProcessing: Int
+  errors: Int
+  errorsMax: Int
+  rssMb: Float
+  heapMb: Float
+  heapMaxMb: Float
+  externalMb: Float
+  sighup: Int
+  sigint: Int
+  sigterm: Int
+}
+
+type MonitorStatSumAggregate {
+  currentProcessing: Int
+  errors: Int
+  errorsMax: Int
+  rssMb: Float
+  heapMb: Float
+  heapMaxMb: Float
+  externalMb: Float
+  sighup: Int
+  sigint: Int
+  sigterm: Int
+}
+
+type MonitorStat {
+  id: ID!
+  parserId: String!
+  createdAt: DateTime!
+  currentProcessing: Int
+  errors: Int
+  errorsMax: Int
+  rssMb: Float
+  heapMb: Float
+  heapMaxMb: Float
+  externalMb: Float
+  sighup: Int
+  sigint: Int
+  sigterm: Int
+}
+
 type PatentCountAggregate {
   id: Int!
   urlGoogle: Int!
@@ -249,18 +379,23 @@ type QueueLengthObject {
 
 type Query {
   healthz(db: Boolean): String!
-  patents(search: String, pagination: PaginationInput! = {skip: 0, take: 10}): [Patent!]!
+  patents(search: String, pagination: PaginationInput): [Patent!]!
   patentsCount: Int!
   patent(id: String!): Patent!
   queueLength: QueueLengthObject!
+  parserIds: [String!]!
+  monitorStats(parserId: String, pagination: PaginationInput): [MonitorStat!]!
+  monitorLogs(pagination: PaginationInput): [MonitorLog!]!
 }
 
 input PaginationInput {
-  skip: Float! = 0
-  take: Float! = 10
+  skip: Float = 0
+  take: Float = 25
 }
 
 type Mutation {
+  proxyReset: Boolean!
+
   """Parse patent"""
   patentParse(patentUrl: URL!): String!
 
@@ -272,3 +407,10 @@ type Mutation {
 A field whose value conforms to the standard URL format as specified in RFC3986: https://www.ietf.org/rfc/rfc3986.txt.
 """
 scalar URL
+
+type Subscription {
+  patentsCountChanged: Int!
+  queueChanged: QueueLengthObject!
+  monitorStatCreated(parserId: String): MonitorStat!
+  monitorLogCreated(parserId: String): MonitorLog!
+}

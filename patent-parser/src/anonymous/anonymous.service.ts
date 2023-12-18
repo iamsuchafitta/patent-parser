@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { AppConfig } from '../common/app-config';
 import Axios from 'axios';
 import net from 'node:net';
@@ -10,13 +10,14 @@ import puppeteer from 'puppeteer';
 import { random } from 'lodash';
 import { EngineEnum } from '../parser/parser.constants';
 import process from 'node:process';
+import { MonitorLogTypeEnum } from '@prisma/client';
+import { WsEvents } from '../common/pub-sub/pub-sub.constants';
+import { AppEventEmitter } from '../common/pub-sub/app-event-emitter';
 
 @Injectable()
 export class AnonymousService {
-  private readonly logger = new Logger(AnonymousService.name);
-
-  private readonly ERRORS_TO_PROXY_RESET = Math.ceil(AppConfig.proxy.ports.length * 0.35);
-  private errorsCount = 0;
+  public readonly ERRORS_TO_PROXY_RESET = Math.ceil(AppConfig.proxy.ports.length * 0.35);
+  public errorsCount = 0;
 
   private currentIndex = random(0, AppConfig.proxy.ports.length - 1);
 
@@ -93,7 +94,7 @@ export class AnonymousService {
   public startAxios() {
     const agent = new SocksProxyAgent(`socks5://${AppConfig.proxy.host}:${this.getNextProxyPort()}`);
     return Axios.create({
-      headers: { 'User-Agent': 'Mozilla/5.0' },
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0' },
       httpsAgent: agent,
       httpAgent: agent,
     });
@@ -101,12 +102,12 @@ export class AnonymousService {
 
   public async thereWasException() {
     this.errorsCount += 1;
-    this.logger.warn(`Connection exceptions count: ${this.errorsCount}/${this.ERRORS_TO_PROXY_RESET}`);
+    AppEventEmitter.MonitorLogCreated(MonitorLogTypeEnum.Warning, `Connection exceptions count: ${this.errorsCount}/${this.ERRORS_TO_PROXY_RESET}`);
     if (this.errorsCount >= this.ERRORS_TO_PROXY_RESET) {
       if (!this.thereWasExceptionPromise) {
-        this.logger.warn('Resetting proxies...');
+        AppEventEmitter.MonitorLogCreated(MonitorLogTypeEnum.Warning, 'Resetting proxies...');
         this.thereWasExceptionPromise = this.resetProxies().catch((error) => {
-          this.logger.error('Error resetting proxies:', error);
+          AppEventEmitter.MonitorLogCreated(MonitorLogTypeEnum.Error, `Error resetting proxies: ${error.message}`);
         });
       }
       await this.thereWasExceptionPromise;
@@ -129,7 +130,7 @@ export class AnonymousService {
       client.on('error', (err) => reject(err));
       client.on('data', () => client.end());
       client.on('end', () => {
-        this.logger.log(`Sent "${command}" to Tor ControlPort (${host}:${port}) successfully`);
+        AppEventEmitter.MonitorLogCreated(MonitorLogTypeEnum.Info, `Sent "${command}" to Tor ControlPort (${host}:${port}) successfully`);
         this.errorsCount = 0;
         resolve(true);
       });

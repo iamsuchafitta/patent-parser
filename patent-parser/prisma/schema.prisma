@@ -110,3 +110,41 @@ model PatentParseQueue {
   createdAt DateTime @default(now()) @db.Timestamptz
   updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz
 }
+
+model MonitorStat {
+  id String @id @default(dbgenerated("uuid_generate_v4()"))
+
+  parserId  String
+  createdAt DateTime @default(now()) @db.Timestamptz
+
+  currentProcessing Int?
+
+  errors    Int?
+  errorsMax Int?
+
+  rssMb      Float?
+  heapMb     Float?
+  heapMaxMb  Float?
+  externalMb Float?
+  sighup     Int?
+  sigint     Int?
+  sigterm    Int?
+
+  @@unique([parserId, createdAt])
+}
+
+enum MonitorLogTypeEnum {
+  Info
+  Warning
+  Error
+}
+
+model MonitorLog {
+  id String @id @default(dbgenerated("uuid_generate_v4()"))
+
+  parserId  String
+  createdAt DateTime @default(now()) @db.Timestamptz
+
+  type    MonitorLogTypeEnum
+  message String
+}

@@ -4,3 +4,10 @@ query QueueLength {
     processing
   }
 }
+
+subscription QueueChanged {
+  queueChanged {
+    total
+    processing
+  }
+}

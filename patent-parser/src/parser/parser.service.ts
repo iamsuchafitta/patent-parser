@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import ms from 'ms';
-import { PatentParseQueue, PatentRelation, PatentRelationTypeEnum, Prisma } from '@prisma/client';
+import { MonitorLogTypeEnum, PatentParseQueue, PatentRelation, PatentRelationTypeEnum, Prisma } from '@prisma/client';
 import { AppConfig } from '../common/app-config';
 import { AnonymousService } from '../anonymous/anonymous.service';
 import { merge } from 'lodash';
@@ -10,12 +10,12 @@ import { Interval } from '@nestjs/schedule';
 import { PROCESSING_TIMEOUT } from '../app.constants';
 import parse from 'node-html-parser';
 import { EngineEnum, GooglePatentSelectors } from './parser.constants';
-import { appMonitor } from '../common/app-monitor';
+import { WsEvents } from '../common/pub-sub/pub-sub.constants';
+import { AppEventEmitter } from '../common/pub-sub/app-event-emitter';
 
 @Injectable()
 export class ParserService implements OnModuleInit {
-  private readonly logger = new Logger(ParserService.name);
-  private currentProcessing: number = 0;
+  public currentProcessing: number = 0;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -28,7 +28,6 @@ export class ParserService implements OnModuleInit {
 
   @Interval(ms('5s'))
   async processQueue() {
-    appMonitor();
     if (this.currentProcessing >= AppConfig.concurrentRequests) return;
     const queueElements = await this.prisma.$transaction(async tr => {
       const elements = await tr.$queryRaw<PatentParseQueue[]>`
@@ -52,13 +51,14 @@ export class ParserService implements OnModuleInit {
       return elements;
     });
     this.currentProcessing += queueElements.length;
+    AppEventEmitter.MonitorStatCreate();
     for (const qElement of queueElements) {
-      this.logger.log(`Processing... ${qElement.url}`);
+      AppEventEmitter.MonitorLogCreated(MonitorLogTypeEnum.Info, `Processing... ${qElement.url}`);
       this.parseGooglePatent(qElement).then(async () => {
-        this.logger.log(`DONE! ${qElement.url}`);
+        AppEventEmitter.MonitorLogCreated(MonitorLogTypeEnum.Info, `DONE! ${qElement.url}`);
         await this.prisma.patentParseQueue.delete({ where: { url: qElement.url } }).catch(() => null);
       }).catch(async (err) => {
-        this.logger.error(`Error processing ${qElement.url}`, err);
+        AppEventEmitter.MonitorLogCreated(MonitorLogTypeEnum.Error, `Error processing ${qElement.url}, ${err.message}`);
       }).finally(() => {
         this.currentProcessing -= 1;
       });
@@ -162,9 +162,6 @@ export class ParserService implements OnModuleInit {
           where: { type_patentMainId_patentOtherId: data },
           create: data,
           update: data,
-        }).catch(error => {
-          console.log('error:', error);
-          throw error;
         });
       }
     }, { timeout: ms('1m') });

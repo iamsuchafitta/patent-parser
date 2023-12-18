@@ -1,17 +1,21 @@
-import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Int, Mutation, Query, Resolver, Subscription } from '@nestjs/graphql';
 import { Patent, QueryMode } from '../../prisma/prisma-nestjs-graphql';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PrismaSelector } from '../../prisma/decorators/prisma-selector.decorator';
 import { Prisma } from '@prisma/client';
-import { PaginationInput, PaginationInputDefault } from '../../common/gql/pagination.input';
-import { InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { PaginationInput } from '../../common/gql/pagination.input';
+import { InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { GraphQLURL } from 'graphql-scalars';
 import ms from 'ms';
 import Papa from 'papaparse';
 import { AnonymousService } from '../../anonymous/anonymous.service';
+import { WsEvents } from '../../common/pub-sub/pub-sub.constants';
+import { AppPubSub } from '../../common/pub-sub/pub-sub';
 
 @Resolver()
 export class PatentResolver {
+  private readonly logger = new Logger(PatentResolver.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly anonymous: AnonymousService,
@@ -19,27 +23,23 @@ export class PatentResolver {
 
   @Query(() => [Patent])
   async patents(
-    @Args('search', { nullable: true }) search: string,
-    @Args('pagination', { defaultValue: PaginationInputDefault }) pagination: PaginationInput,
     @PrismaSelector() select: Prisma.PatentSelect,
+    @Args('search', { nullable: true }) search?: string,
+    @Args('pagination', { nullable: true }) pagination?: PaginationInput,
   ): Promise<Patent[]> {
-    console.log(`===\nstart search "${search}"`, pagination);
-    console.time(`prisma`);
-    const result = await this.prisma.patent.findMany({
-      ...pagination,
+    return this.prisma.patent.findMany({
+      skip: pagination?.skip || 0,
+      take: pagination?.take || 25,
       select,
-      where: {
+      where: search ? {
         OR: [
           { id: { contains: search, mode: QueryMode.insensitive } },
           { title: { contains: search, mode: QueryMode.insensitive } },
           { abstract: { contains: search, mode: QueryMode.insensitive } },
           { description: { contains: search, mode: QueryMode.insensitive } },
-        ]
-      },
+        ],
+      } : undefined,
     });
-    console.timeEnd(`prisma`);
-    console.log('returned', result.length);
-    return result;
   }
 
   @Query(() => Int)
@@ -70,7 +70,7 @@ export class PatentResolver {
       url: patentUrl,
       createdAt: nextPatentToParse ? new Date(nextPatentToParse!.getTime() - ms('1h')) : undefined,
       startedAt: null,
-    }
+    };
     await this.prisma.patentParseQueue.upsert({
       where: { url: patentUrl },
       create: data,
@@ -83,14 +83,22 @@ export class PatentResolver {
   public async patentsSearch(
     @Args('search') search: string,
     @Args('isOrganisation', { defaultValue: false }) isOrganisation: boolean,
-    @Args('isIgnoreExisting', { defaultValue: true }) ignoreExisting: boolean,
+    @Args('isIgnoreExisting', { defaultValue: true }) ignoreExisting: boolean = true,
   ): Promise<number> {
     const param = isOrganisation ? 'assignee' : 'q';
+    // https://patents.google.com/xhr/query?url=q%3Dколлайдер%26language%3DRUSSIAN&exp=&download=true
     const url = `https://patents.google.com/xhr/query?url=${param}%3D${search.trim()}%26language%3DRUSSIAN&exp=&download=true`;
-    const csvString = await this.anonymous.startAxios().get<string>(url).then((res) => res.data).catch(async (err) => {
-      await this.anonymous.thereWasException();
-      throw new InternalServerErrorException(`Error getting search results: ${err.message}`);
-    });
+    const axios = this.anonymous.startAxios();
+    const csvString = await axios.get<string>(url).then((res) => res.data)
+      .catch(async (err) => {
+        // https://icanhazip.com
+        // https://api.ipify.org
+        // https://jsonip.com
+        const ipAddress = await axios.get<string>('https://api.ipify.org').then((res) => res.data);
+        this.logger.error(`Error getting search results from ${ipAddress}: ${err.message}`);
+        await this.anonymous.thereWasException();
+        throw new InternalServerErrorException(`Error getting search results from ${ipAddress}: ${err.message}`);
+      });
     const csvParsed = Papa.parse(csvString, { header: false, skipEmptyLines: true });
     let patentsToParse = csvParsed.data.slice(2).map((row: string) => ({ id: row[0], url: row[8] }));
     if (ignoreExisting) {
@@ -106,5 +114,10 @@ export class PatentResolver {
       update: { url: p.url },
     })));
     return patentsToParse.length;
+  }
+
+  @Subscription(() => Int)
+  patentsCountChanged() {
+    return AppPubSub.asyncIterator(WsEvents.PatentsCountChanged);
   }
 }

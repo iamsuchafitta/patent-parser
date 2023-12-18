@@ -13,6 +13,7 @@ import { ApiModule } from './api/api.module';
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       autoSchemaFile: 'src/schema.gql',
+      subscriptions: { 'graphql-ws': true },
     }),
     ScheduleModule.forRoot(),
     ParserModule,
@@ -20,6 +21,8 @@ import { ApiModule } from './api/api.module';
     AnonymousModule,
     ApiModule,
   ],
-  providers: [AppResolver],
+  providers: [
+    AppResolver,
+  ],
 })
 export class AppModule {}

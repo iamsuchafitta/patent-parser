@@ -87,17 +87,148 @@ The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://
 """
 scalar JSON
 
+type MonitorLog {
+  createdAt: DateTime!
+  id: ID!
+  message: String!
+  parserId: String!
+  type: MonitorLogTypeEnum!
+}
+
+type MonitorLogCountAggregate {
+  _all: Int!
+  createdAt: Int!
+  id: Int!
+  message: Int!
+  parserId: Int!
+  type: Int!
+}
+
+type MonitorLogMaxAggregate {
+  createdAt: DateTime
+  id: String
+  message: String
+  parserId: String
+  type: MonitorLogTypeEnum
+}
+
+type MonitorLogMinAggregate {
+  createdAt: DateTime
+  id: String
+  message: String
+  parserId: String
+  type: MonitorLogTypeEnum
+}
+
+enum MonitorLogTypeEnum {
+  Error
+  Info
+  Warning
+}
+
+type MonitorStat {
+  createdAt: DateTime!
+  currentProcessing: Int
+  errors: Int
+  errorsMax: Int
+  externalMb: Float
+  heapMaxMb: Float
+  heapMb: Float
+  id: ID!
+  parserId: String!
+  rssMb: Float
+  sighup: Int
+  sigint: Int
+  sigterm: Int
+}
+
+type MonitorStatAvgAggregate {
+  currentProcessing: Float
+  errors: Float
+  errorsMax: Float
+  externalMb: Float
+  heapMaxMb: Float
+  heapMb: Float
+  rssMb: Float
+  sighup: Float
+  sigint: Float
+  sigterm: Float
+}
+
+type MonitorStatCountAggregate {
+  _all: Int!
+  createdAt: Int!
+  currentProcessing: Int!
+  errors: Int!
+  errorsMax: Int!
+  externalMb: Int!
+  heapMaxMb: Int!
+  heapMb: Int!
+  id: Int!
+  parserId: Int!
+  rssMb: Int!
+  sighup: Int!
+  sigint: Int!
+  sigterm: Int!
+}
+
+type MonitorStatMaxAggregate {
+  createdAt: DateTime
+  currentProcessing: Int
+  errors: Int
+  errorsMax: Int
+  externalMb: Float
+  heapMaxMb: Float
+  heapMb: Float
+  id: String
+  parserId: String
+  rssMb: Float
+  sighup: Int
+  sigint: Int
+  sigterm: Int
+}
+
+type MonitorStatMinAggregate {
+  createdAt: DateTime
+  currentProcessing: Int
+  errors: Int
+  errorsMax: Int
+  externalMb: Float
+  heapMaxMb: Float
+  heapMb: Float
+  id: String
+  parserId: String
+  rssMb: Float
+  sighup: Int
+  sigint: Int
+  sigterm: Int
+}
+
+type MonitorStatSumAggregate {
+  currentProcessing: Int
+  errors: Int
+  errorsMax: Int
+  externalMb: Float
+  heapMaxMb: Float
+  heapMb: Float
+  rssMb: Float
+  sighup: Int
+  sigint: Int
+  sigterm: Int
+}
+
 type Mutation {
   """Parse patent"""
   patentParse(patentUrl: URL!): String!
 
   """Add patents to parse queue by search"""
-  patentsSearch(isIgnoreExisting: Boolean! = false, isOrganisation: Boolean! = false, search: String!): Int!
+  patentsSearch(isIgnoreExisting: Boolean! = true, isOrganisation: Boolean! = false, search: String!): Int!
+  proxyReset: Boolean!
 }
 
 input PaginationInput {
-  skip: Float! = 0
-  take: Float! = 10
+  skip: Float = 0
+  take: Float = 25
 }
 
 """Патент"""
@@ -251,8 +382,11 @@ enum PatentRelationTypeEnum {
 
 type Query {
   healthz(db: Boolean): String!
+  monitorLogs(pagination: PaginationInput): [MonitorLog!]!
+  monitorStats(pagination: PaginationInput, parserId: String): [MonitorStat!]!
+  parserIds: [String!]!
   patent(id: String!): Patent!
-  patents(pagination: PaginationInput! = {skip: 0, take: 10}, search: String): [Patent!]!
+  patents(pagination: PaginationInput, search: String): [Patent!]!
   patentsCount: Int!
   queueLength: QueueLengthObject!
 }
@@ -263,6 +397,13 @@ type QueueLengthObject {
 
   """Сколько всего элементов в очереди"""
   total: Float!
+}
+
+type Subscription {
+  monitorLogCreated(parserId: String): MonitorLog!
+  monitorStatCreated(parserId: String): MonitorStat!
+  patentsCountChanged: Int!
+  queueChanged: QueueLengthObject!
 }
 
 """

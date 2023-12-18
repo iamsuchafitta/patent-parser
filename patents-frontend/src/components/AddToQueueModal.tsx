@@ -18,9 +18,11 @@ const urlGoogleRegex = /^https:\/\/patents\.google\.com\/patent\/([A-Z]{2})\d{3,
 export const AddToQueueModal: AddToQueueModalFC = merge(() => {
   const isOpen = useReactiveVar(isAddToQueueModalOpen);
   const [parse, { loading: isLoadingParse }] = usePatentsParseMutation({
+    onError: error => toast.error(`Ошибка добавления патента на парсинг: ${error.message}`),
     onCompleted: () => toast.success(`Патент добавлен в очередь`) && AddToQueueModal.close(),
   });
   const [addToQueue, { loading: isLoadingSearch }] = usePatentsSearchMutation({
+    onError: error => toast.error(`Ошибка добавления запроса в очередь: ${error.message}`),
     onCompleted: ({ patentsSearch: count }) => toast.success(`Добавлено ${count} патентов в очередь`) && AddToQueueModal.close(),
     refetchQueries: [refetchQueueLengthQuery()],
   });

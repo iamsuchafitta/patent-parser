@@ -7,7 +7,7 @@ export const getSrcDir = (...subDirs: string[]): string => join(process.cwd(), '
 export const SchemaClientPlugin = resolve('codegen', 'plugins', 'schema-client.plugin');
 
 /* Env */
-export const API_GRAPHQL_ENDPOINT = process.env.VITE_API_GRAPHQL_ENDPOINT;
+export const API_GRAPHQL_ENDPOINT = process.env.VITE_API_GQL_ENDPOINT;
 
 /* Paths */
 export const srcApiDir = getSrcDir('api');

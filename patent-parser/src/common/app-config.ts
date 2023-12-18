@@ -4,6 +4,7 @@ import { EnvModeEnum } from './env-mode.enum';
 
 interface IConfig {
   mode: EnvModeEnum;
+  parserId: string;
   port: number;
   concurrentRequests: number;
   proxy: {
@@ -11,17 +12,21 @@ interface IConfig {
     controlPort: number;
     ports: number[];
   };
+  databaseUrl: string;
 }
 
 class AppConfigClass {
   public readonly mode: IConfig['mode'];
+  public readonly parserId: IConfig['parserId'];
   public readonly port: IConfig['port'];
   public readonly concurrentRequests: IConfig['concurrentRequests'];
   public readonly proxy: IConfig['proxy'];
+  public readonly databaseUrl: IConfig['databaseUrl'];
 
   constructor() {
     const config = this.validateEnv();
     this.mode = config.ENV_MODE;
+    this.parserId = config.PARSER_ID;
     this.port = parseInt(config.PORT, 10);
     this.concurrentRequests = parseInt(config.CONCURRENT_REQUESTS, 10);
     this.proxy = {
@@ -29,6 +34,7 @@ class AppConfigClass {
       controlPort: parseInt(config.PROXY_CONTROL_PORT, 10),
       ports: config.PROXY_PORTS,
     };
+    this.databaseUrl = config.DATABASE_URL;
     console.log(`=== AppConfig initialized ===`);
   }
 
@@ -36,6 +42,7 @@ class AppConfigClass {
     // Main validation
     const { value, error } = joi.object<NodeJS.ProcessEnv>({
       ENV_MODE: joi.string().valid(...values(EnvModeEnum)).required(),
+      PARSER_ID: joi.string().required(),
       PORT: joi.number().port().optional().default(5000),
       CONCURRENT_REQUESTS: joi.number().integer().min(1).required(),
       PROXY_HOST: joi.string().hostname().required(),

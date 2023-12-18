@@ -1,28 +1,29 @@
-import { Header } from './components/Header.tsx';
-import { PatentsTable } from './components/PatentsTable.tsx';
 import { ThemeStore } from './stores/themeStore.ts';
 import { Toaster } from 'sonner';
-import { AddToQueueModal } from './components/AddToQueueModal.tsx';
 import { observer } from 'mobx-react-lite';
+import { Route, Routes } from 'react-router-dom';
+import { MainLayout } from './pages/layouts/MainLayout.tsx';
+import { PatentsTablePage } from './pages/PatentsTablePage.tsx';
+import { LogsPage } from './pages/LogsPage.tsx';
+import { MonitorPage } from './pages/MonitorPage.tsx';
 
 export const App = observer(() => {
-  // const {
-  //   data: { queueLength } = {},
-  //   loading: isLoadingQueue,
-  //   error: errorQueue,
-  // } = useQueueLengthQuery();
-
   return (
     <>
-      <Header/>
-      <PatentsTable/>
+      <Routes>
+        <Route path="/" element={<MainLayout/>}>
+          <Route index element={<PatentsTablePage/>}/>
+          <Route path="logs" element={<LogsPage/>}/>
+          <Route path="monitor" element={<MonitorPage/>}/>
+        </Route>
+      </Routes>
+
       <Toaster
         richColors
         theme={ThemeStore.isDarkMode ? 'dark' : 'light'}
         position="bottom-right"
         closeButton
       />
-      <AddToQueueModal/>
     </>
   );
 });

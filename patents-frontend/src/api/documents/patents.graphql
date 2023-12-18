@@ -1,4 +1,4 @@
-query Patents($pagination: PaginationInput!, $search: String) {
+query Patents($pagination: PaginationInput, $search: String) {
   patents(pagination: $pagination, search: $search) {
     id
     urlGoogle
@@ -47,4 +47,8 @@ mutation PatentsParse($patentUrl: URL!) {
 
 mutation PatentsSearch($search: String!, $isOrganisation: Boolean!, $isIgnoreExisting: Boolean!) {
   patentsSearch(search: $search, isOrganisation: $isOrganisation, isIgnoreExisting: $isIgnoreExisting)
+}
+
+subscription PatentsCountChanged {
+  patentsCountChanged
 }

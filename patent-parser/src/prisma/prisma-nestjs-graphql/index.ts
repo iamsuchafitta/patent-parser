@@ -46,6 +46,12 @@ export enum NullableJsonNullValueInput {
     JsonNull = "JsonNull"
 }
 
+export enum MonitorLogTypeEnum {
+    Info = "Info",
+    Warning = "Warning",
+    Error = "Error"
+}
+
 export enum JsonNullValueFilter {
     DbNull = "DbNull",
     JsonNull = "JsonNull",
@@ -77,6 +83,30 @@ export enum PatentScalarFieldEnum {
     claims = "claims"
 }
 
+export enum MonitorStatScalarFieldEnum {
+    id = "id",
+    parserId = "parserId",
+    createdAt = "createdAt",
+    currentProcessing = "currentProcessing",
+    errors = "errors",
+    errorsMax = "errorsMax",
+    rssMb = "rssMb",
+    heapMb = "heapMb",
+    heapMaxMb = "heapMaxMb",
+    externalMb = "externalMb",
+    sighup = "sighup",
+    sigint = "sigint",
+    sigterm = "sigterm"
+}
+
+export enum MonitorLogScalarFieldEnum {
+    id = "id",
+    parserId = "parserId",
+    createdAt = "createdAt",
+    type = "type",
+    message = "message"
+}
+
 export enum ConceptScalarFieldEnum {
     id = "id",
     name = "name",
@@ -98,10 +128,13 @@ export enum ApplicationEventScalarFieldEnum {
 
 registerEnumType(ApplicationEventScalarFieldEnum, { name: 'ApplicationEventScalarFieldEnum', description: undefined })
 registerEnumType(ConceptScalarFieldEnum, { name: 'ConceptScalarFieldEnum', description: undefined })
+registerEnumType(MonitorLogScalarFieldEnum, { name: 'MonitorLogScalarFieldEnum', description: undefined })
+registerEnumType(MonitorStatScalarFieldEnum, { name: 'MonitorStatScalarFieldEnum', description: undefined })
 registerEnumType(PatentScalarFieldEnum, { name: 'PatentScalarFieldEnum', description: undefined })
 registerEnumType(PatentParseQueueScalarFieldEnum, { name: 'PatentParseQueueScalarFieldEnum', description: undefined })
 registerEnumType(PatentRelationScalarFieldEnum, { name: 'PatentRelationScalarFieldEnum', description: undefined })
 registerEnumType(JsonNullValueFilter, { name: 'JsonNullValueFilter', description: undefined })
+registerEnumType(MonitorLogTypeEnum, { name: 'MonitorLogTypeEnum', description: undefined })
 registerEnumType(NullableJsonNullValueInput, { name: 'NullableJsonNullValueInput', description: undefined })
 registerEnumType(NullsOrder, { name: 'NullsOrder', description: undefined })
 registerEnumType(PatentRelationTypeEnum, { name: 'PatentRelationTypeEnum', description: "Тип связи от первого патента ко второму" })
@@ -1724,6 +1757,1624 @@ export class UpsertOneConceptArgs {
     @Field(() => ConceptUpdateInput, {nullable:false})
     @Type(() => ConceptUpdateInput)
     update!: InstanceType<typeof ConceptUpdateInput>;
+}
+
+@ObjectType()
+export class AggregateMonitorLog {
+    @Field(() => MonitorLogCountAggregate, {nullable:true})
+    _count?: InstanceType<typeof MonitorLogCountAggregate>;
+    @Field(() => MonitorLogMinAggregate, {nullable:true})
+    _min?: InstanceType<typeof MonitorLogMinAggregate>;
+    @Field(() => MonitorLogMaxAggregate, {nullable:true})
+    _max?: InstanceType<typeof MonitorLogMaxAggregate>;
+}
+
+@ArgsType()
+export class CreateManyMonitorLogArgs {
+    @Field(() => [MonitorLogCreateManyInput], {nullable:false})
+    @Type(() => MonitorLogCreateManyInput)
+    data!: Array<MonitorLogCreateManyInput>;
+    @Field(() => Boolean, {nullable:true})
+    skipDuplicates?: boolean;
+}
+
+@ArgsType()
+export class CreateOneMonitorLogArgs {
+    @Field(() => MonitorLogCreateInput, {nullable:false})
+    @Type(() => MonitorLogCreateInput)
+    data!: InstanceType<typeof MonitorLogCreateInput>;
+}
+
+@ArgsType()
+export class DeleteManyMonitorLogArgs {
+    @Field(() => MonitorLogWhereInput, {nullable:true})
+    @Type(() => MonitorLogWhereInput)
+    where?: InstanceType<typeof MonitorLogWhereInput>;
+}
+
+@ArgsType()
+export class DeleteOneMonitorLogArgs {
+    @Field(() => MonitorLogWhereUniqueInput, {nullable:false})
+    @Type(() => MonitorLogWhereUniqueInput)
+    where!: Prisma.AtLeast<MonitorLogWhereUniqueInput, 'id'>;
+}
+
+@ArgsType()
+export class FindFirstMonitorLogOrThrowArgs {
+    @Field(() => MonitorLogWhereInput, {nullable:true})
+    @Type(() => MonitorLogWhereInput)
+    where?: InstanceType<typeof MonitorLogWhereInput>;
+    @Field(() => [MonitorLogOrderByWithRelationInput], {nullable:true})
+    orderBy?: Array<MonitorLogOrderByWithRelationInput>;
+    @Field(() => MonitorLogWhereUniqueInput, {nullable:true})
+    cursor?: Prisma.AtLeast<MonitorLogWhereUniqueInput, 'id'>;
+    @Field(() => Int, {nullable:true})
+    take?: number;
+    @Field(() => Int, {nullable:true})
+    skip?: number;
+    @Field(() => [MonitorLogScalarFieldEnum], {nullable:true})
+    distinct?: Array<keyof typeof MonitorLogScalarFieldEnum>;
+}
+
+@ArgsType()
+export class FindFirstMonitorLogArgs {
+    @Field(() => MonitorLogWhereInput, {nullable:true})
+    @Type(() => MonitorLogWhereInput)
+    where?: InstanceType<typeof MonitorLogWhereInput>;
+    @Field(() => [MonitorLogOrderByWithRelationInput], {nullable:true})
+    orderBy?: Array<MonitorLogOrderByWithRelationInput>;
+    @Field(() => MonitorLogWhereUniqueInput, {nullable:true})
+    cursor?: Prisma.AtLeast<MonitorLogWhereUniqueInput, 'id'>;
+    @Field(() => Int, {nullable:true})
+    take?: number;
+    @Field(() => Int, {nullable:true})
+    skip?: number;
+    @Field(() => [MonitorLogScalarFieldEnum], {nullable:true})
+    distinct?: Array<keyof typeof MonitorLogScalarFieldEnum>;
+}
+
+@ArgsType()
+export class FindManyMonitorLogArgs {
+    @Field(() => MonitorLogWhereInput, {nullable:true})
+    @Type(() => MonitorLogWhereInput)
+    where?: InstanceType<typeof MonitorLogWhereInput>;
+    @Field(() => [MonitorLogOrderByWithRelationInput], {nullable:true})
+    orderBy?: Array<MonitorLogOrderByWithRelationInput>;
+    @Field(() => MonitorLogWhereUniqueInput, {nullable:true})
+    cursor?: Prisma.AtLeast<MonitorLogWhereUniqueInput, 'id'>;
+    @Field(() => Int, {nullable:true})
+    take?: number;
+    @Field(() => Int, {nullable:true})
+    skip?: number;
+    @Field(() => [MonitorLogScalarFieldEnum], {nullable:true})
+    distinct?: Array<keyof typeof MonitorLogScalarFieldEnum>;
+}
+
+@ArgsType()
+export class FindUniqueMonitorLogOrThrowArgs {
+    @Field(() => MonitorLogWhereUniqueInput, {nullable:false})
+    @Type(() => MonitorLogWhereUniqueInput)
+    where!: Prisma.AtLeast<MonitorLogWhereUniqueInput, 'id'>;
+}
+
+@ArgsType()
+export class FindUniqueMonitorLogArgs {
+    @Field(() => MonitorLogWhereUniqueInput, {nullable:false})
+    @Type(() => MonitorLogWhereUniqueInput)
+    where!: Prisma.AtLeast<MonitorLogWhereUniqueInput, 'id'>;
+}
+
+@ArgsType()
+export class MonitorLogAggregateArgs {
+    @Field(() => MonitorLogWhereInput, {nullable:true})
+    @Type(() => MonitorLogWhereInput)
+    where?: InstanceType<typeof MonitorLogWhereInput>;
+    @Field(() => [MonitorLogOrderByWithRelationInput], {nullable:true})
+    orderBy?: Array<MonitorLogOrderByWithRelationInput>;
+    @Field(() => MonitorLogWhereUniqueInput, {nullable:true})
+    cursor?: Prisma.AtLeast<MonitorLogWhereUniqueInput, 'id'>;
+    @Field(() => Int, {nullable:true})
+    take?: number;
+    @Field(() => Int, {nullable:true})
+    skip?: number;
+    @Field(() => MonitorLogCountAggregateInput, {nullable:true})
+    _count?: InstanceType<typeof MonitorLogCountAggregateInput>;
+    @Field(() => MonitorLogMinAggregateInput, {nullable:true})
+    _min?: InstanceType<typeof MonitorLogMinAggregateInput>;
+    @Field(() => MonitorLogMaxAggregateInput, {nullable:true})
+    _max?: InstanceType<typeof MonitorLogMaxAggregateInput>;
+}
+
+@InputType()
+export class MonitorLogCountAggregateInput {
+    @Field(() => Boolean, {nullable:true})
+    id?: true;
+    @Field(() => Boolean, {nullable:true})
+    parserId?: true;
+    @Field(() => Boolean, {nullable:true})
+    createdAt?: true;
+    @Field(() => Boolean, {nullable:true})
+    type?: true;
+    @Field(() => Boolean, {nullable:true})
+    message?: true;
+    @Field(() => Boolean, {nullable:true})
+    _all?: true;
+}
+
+@ObjectType()
+export class MonitorLogCountAggregate {
+    @Field(() => Int, {nullable:false})
+    id!: number;
+    @Field(() => Int, {nullable:false})
+    parserId!: number;
+    @Field(() => Int, {nullable:false})
+    createdAt!: number;
+    @Field(() => Int, {nullable:false})
+    type!: number;
+    @Field(() => Int, {nullable:false})
+    message!: number;
+    @Field(() => Int, {nullable:false})
+    _all!: number;
+}
+
+@InputType()
+export class MonitorLogCountOrderByAggregateInput {
+    @Field(() => SortOrder, {nullable:true})
+    id?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    parserId?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    createdAt?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    type?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    message?: keyof typeof SortOrder;
+}
+
+@InputType()
+export class MonitorLogCreateManyInput {
+    @Field(() => String, {nullable:true})
+    id?: string;
+    @Field(() => String, {nullable:false})
+    parserId!: string;
+    @Field(() => Date, {nullable:true})
+    createdAt?: Date | string;
+    @Field(() => MonitorLogTypeEnum, {nullable:false})
+    type!: keyof typeof MonitorLogTypeEnum;
+    @Field(() => String, {nullable:false})
+    message!: string;
+}
+
+@InputType()
+export class MonitorLogCreateInput {
+    @Field(() => String, {nullable:true})
+    id?: string;
+    @Field(() => String, {nullable:false})
+    parserId!: string;
+    @Field(() => Date, {nullable:true})
+    createdAt?: Date | string;
+    @Field(() => MonitorLogTypeEnum, {nullable:false})
+    type!: keyof typeof MonitorLogTypeEnum;
+    @Field(() => String, {nullable:false})
+    message!: string;
+}
+
+@ArgsType()
+export class MonitorLogGroupByArgs {
+    @Field(() => MonitorLogWhereInput, {nullable:true})
+    @Type(() => MonitorLogWhereInput)
+    where?: InstanceType<typeof MonitorLogWhereInput>;
+    @Field(() => [MonitorLogOrderByWithAggregationInput], {nullable:true})
+    orderBy?: Array<MonitorLogOrderByWithAggregationInput>;
+    @Field(() => [MonitorLogScalarFieldEnum], {nullable:false})
+    by!: Array<keyof typeof MonitorLogScalarFieldEnum>;
+    @Field(() => MonitorLogScalarWhereWithAggregatesInput, {nullable:true})
+    having?: InstanceType<typeof MonitorLogScalarWhereWithAggregatesInput>;
+    @Field(() => Int, {nullable:true})
+    take?: number;
+    @Field(() => Int, {nullable:true})
+    skip?: number;
+    @Field(() => MonitorLogCountAggregateInput, {nullable:true})
+    _count?: InstanceType<typeof MonitorLogCountAggregateInput>;
+    @Field(() => MonitorLogMinAggregateInput, {nullable:true})
+    _min?: InstanceType<typeof MonitorLogMinAggregateInput>;
+    @Field(() => MonitorLogMaxAggregateInput, {nullable:true})
+    _max?: InstanceType<typeof MonitorLogMaxAggregateInput>;
+}
+
+@ObjectType()
+export class MonitorLogGroupBy {
+    @Field(() => String, {nullable:false})
+    id!: string;
+    @Field(() => String, {nullable:false})
+    parserId!: string;
+    @Field(() => Date, {nullable:false})
+    createdAt!: Date | string;
+    @Field(() => MonitorLogTypeEnum, {nullable:false})
+    type!: keyof typeof MonitorLogTypeEnum;
+    @Field(() => String, {nullable:false})
+    message!: string;
+    @Field(() => MonitorLogCountAggregate, {nullable:true})
+    _count?: InstanceType<typeof MonitorLogCountAggregate>;
+    @Field(() => MonitorLogMinAggregate, {nullable:true})
+    _min?: InstanceType<typeof MonitorLogMinAggregate>;
+    @Field(() => MonitorLogMaxAggregate, {nullable:true})
+    _max?: InstanceType<typeof MonitorLogMaxAggregate>;
+}
+
+@InputType()
+export class MonitorLogMaxAggregateInput {
+    @Field(() => Boolean, {nullable:true})
+    id?: true;
+    @Field(() => Boolean, {nullable:true})
+    parserId?: true;
+    @Field(() => Boolean, {nullable:true})
+    createdAt?: true;
+    @Field(() => Boolean, {nullable:true})
+    type?: true;
+    @Field(() => Boolean, {nullable:true})
+    message?: true;
+}
+
+@ObjectType()
+export class MonitorLogMaxAggregate {
+    @Field(() => String, {nullable:true})
+    id?: string;
+    @Field(() => String, {nullable:true})
+    parserId?: string;
+    @Field(() => Date, {nullable:true})
+    createdAt?: Date | string;
+    @Field(() => MonitorLogTypeEnum, {nullable:true})
+    type?: keyof typeof MonitorLogTypeEnum;
+    @Field(() => String, {nullable:true})
+    message?: string;
+}
+
+@InputType()
+export class MonitorLogMaxOrderByAggregateInput {
+    @Field(() => SortOrder, {nullable:true})
+    id?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    parserId?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    createdAt?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    type?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    message?: keyof typeof SortOrder;
+}
+
+@InputType()
+export class MonitorLogMinAggregateInput {
+    @Field(() => Boolean, {nullable:true})
+    id?: true;
+    @Field(() => Boolean, {nullable:true})
+    parserId?: true;
+    @Field(() => Boolean, {nullable:true})
+    createdAt?: true;
+    @Field(() => Boolean, {nullable:true})
+    type?: true;
+    @Field(() => Boolean, {nullable:true})
+    message?: true;
+}
+
+@ObjectType()
+export class MonitorLogMinAggregate {
+    @Field(() => String, {nullable:true})
+    id?: string;
+    @Field(() => String, {nullable:true})
+    parserId?: string;
+    @Field(() => Date, {nullable:true})
+    createdAt?: Date | string;
+    @Field(() => MonitorLogTypeEnum, {nullable:true})
+    type?: keyof typeof MonitorLogTypeEnum;
+    @Field(() => String, {nullable:true})
+    message?: string;
+}
+
+@InputType()
+export class MonitorLogMinOrderByAggregateInput {
+    @Field(() => SortOrder, {nullable:true})
+    id?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    parserId?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    createdAt?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    type?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    message?: keyof typeof SortOrder;
+}
+
+@InputType()
+export class MonitorLogOrderByWithAggregationInput {
+    @Field(() => SortOrder, {nullable:true})
+    id?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    parserId?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    createdAt?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    type?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    message?: keyof typeof SortOrder;
+    @Field(() => MonitorLogCountOrderByAggregateInput, {nullable:true})
+    _count?: InstanceType<typeof MonitorLogCountOrderByAggregateInput>;
+    @Field(() => MonitorLogMaxOrderByAggregateInput, {nullable:true})
+    _max?: InstanceType<typeof MonitorLogMaxOrderByAggregateInput>;
+    @Field(() => MonitorLogMinOrderByAggregateInput, {nullable:true})
+    _min?: InstanceType<typeof MonitorLogMinOrderByAggregateInput>;
+}
+
+@InputType()
+export class MonitorLogOrderByWithRelationInput {
+    @Field(() => SortOrder, {nullable:true})
+    id?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    parserId?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    createdAt?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    type?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    message?: keyof typeof SortOrder;
+}
+
+@InputType()
+export class MonitorLogScalarWhereWithAggregatesInput {
+    @Field(() => [MonitorLogScalarWhereWithAggregatesInput], {nullable:true})
+    AND?: Array<MonitorLogScalarWhereWithAggregatesInput>;
+    @Field(() => [MonitorLogScalarWhereWithAggregatesInput], {nullable:true})
+    OR?: Array<MonitorLogScalarWhereWithAggregatesInput>;
+    @Field(() => [MonitorLogScalarWhereWithAggregatesInput], {nullable:true})
+    NOT?: Array<MonitorLogScalarWhereWithAggregatesInput>;
+    @Field(() => StringWithAggregatesFilter, {nullable:true})
+    id?: InstanceType<typeof StringWithAggregatesFilter>;
+    @Field(() => StringWithAggregatesFilter, {nullable:true})
+    parserId?: InstanceType<typeof StringWithAggregatesFilter>;
+    @Field(() => DateTimeWithAggregatesFilter, {nullable:true})
+    createdAt?: InstanceType<typeof DateTimeWithAggregatesFilter>;
+    @Field(() => EnumMonitorLogTypeEnumWithAggregatesFilter, {nullable:true})
+    type?: InstanceType<typeof EnumMonitorLogTypeEnumWithAggregatesFilter>;
+    @Field(() => StringWithAggregatesFilter, {nullable:true})
+    message?: InstanceType<typeof StringWithAggregatesFilter>;
+}
+
+@InputType()
+export class MonitorLogUncheckedCreateInput {
+    @Field(() => String, {nullable:true})
+    id?: string;
+    @Field(() => String, {nullable:false})
+    parserId!: string;
+    @Field(() => Date, {nullable:true})
+    createdAt?: Date | string;
+    @Field(() => MonitorLogTypeEnum, {nullable:false})
+    type!: keyof typeof MonitorLogTypeEnum;
+    @Field(() => String, {nullable:false})
+    message!: string;
+}
+
+@InputType()
+export class MonitorLogUncheckedUpdateManyInput {
+    @Field(() => String, {nullable:true})
+    id?: string;
+    @Field(() => String, {nullable:true})
+    parserId?: string;
+    @Field(() => Date, {nullable:true})
+    createdAt?: Date | string;
+    @Field(() => MonitorLogTypeEnum, {nullable:true})
+    type?: keyof typeof MonitorLogTypeEnum;
+    @Field(() => String, {nullable:true})
+    message?: string;
+}
+
+@InputType()
+export class MonitorLogUncheckedUpdateInput {
+    @Field(() => String, {nullable:true})
+    id?: string;
+    @Field(() => String, {nullable:true})
+    parserId?: string;
+    @Field(() => Date, {nullable:true})
+    createdAt?: Date | string;
+    @Field(() => MonitorLogTypeEnum, {nullable:true})
+    type?: keyof typeof MonitorLogTypeEnum;
+    @Field(() => String, {nullable:true})
+    message?: string;
+}
+
+@InputType()
+export class MonitorLogUpdateManyMutationInput {
+    @Field(() => String, {nullable:true})
+    id?: string;
+    @Field(() => String, {nullable:true})
+    parserId?: string;
+    @Field(() => Date, {nullable:true})
+    createdAt?: Date | string;
+    @Field(() => MonitorLogTypeEnum, {nullable:true})
+    type?: keyof typeof MonitorLogTypeEnum;
+    @Field(() => String, {nullable:true})
+    message?: string;
+}
+
+@InputType()
+export class MonitorLogUpdateInput {
+    @Field(() => String, {nullable:true})
+    id?: string;
+    @Field(() => String, {nullable:true})
+    parserId?: string;
+    @Field(() => Date, {nullable:true})
+    createdAt?: Date | string;
+    @Field(() => MonitorLogTypeEnum, {nullable:true})
+    type?: keyof typeof MonitorLogTypeEnum;
+    @Field(() => String, {nullable:true})
+    message?: string;
+}
+
+@InputType()
+export class MonitorLogWhereUniqueInput {
+    @Field(() => String, {nullable:true})
+    id?: string;
+    @Field(() => [MonitorLogWhereInput], {nullable:true})
+    AND?: Array<MonitorLogWhereInput>;
+    @Field(() => [MonitorLogWhereInput], {nullable:true})
+    OR?: Array<MonitorLogWhereInput>;
+    @Field(() => [MonitorLogWhereInput], {nullable:true})
+    NOT?: Array<MonitorLogWhereInput>;
+    @Field(() => StringFilter, {nullable:true})
+    parserId?: InstanceType<typeof StringFilter>;
+    @Field(() => DateTimeFilter, {nullable:true})
+    createdAt?: InstanceType<typeof DateTimeFilter>;
+    @Field(() => EnumMonitorLogTypeEnumFilter, {nullable:true})
+    type?: InstanceType<typeof EnumMonitorLogTypeEnumFilter>;
+    @Field(() => StringFilter, {nullable:true})
+    message?: InstanceType<typeof StringFilter>;
+}
+
+@InputType()
+export class MonitorLogWhereInput {
+    @Field(() => [MonitorLogWhereInput], {nullable:true})
+    AND?: Array<MonitorLogWhereInput>;
+    @Field(() => [MonitorLogWhereInput], {nullable:true})
+    OR?: Array<MonitorLogWhereInput>;
+    @Field(() => [MonitorLogWhereInput], {nullable:true})
+    NOT?: Array<MonitorLogWhereInput>;
+    @Field(() => StringFilter, {nullable:true})
+    id?: InstanceType<typeof StringFilter>;
+    @Field(() => StringFilter, {nullable:true})
+    parserId?: InstanceType<typeof StringFilter>;
+    @Field(() => DateTimeFilter, {nullable:true})
+    createdAt?: InstanceType<typeof DateTimeFilter>;
+    @Field(() => EnumMonitorLogTypeEnumFilter, {nullable:true})
+    type?: InstanceType<typeof EnumMonitorLogTypeEnumFilter>;
+    @Field(() => StringFilter, {nullable:true})
+    message?: InstanceType<typeof StringFilter>;
+}
+
+@ObjectType()
+export class MonitorLog {
+    @Field(() => ID, {nullable:false})
+    id!: string;
+    @Field(() => String, {nullable:false})
+    parserId!: string;
+    @Field(() => Date, {nullable:false})
+    createdAt!: Date;
+    @Field(() => MonitorLogTypeEnum, {nullable:false})
+    type!: keyof typeof MonitorLogTypeEnum;
+    @Field(() => String, {nullable:false})
+    message!: string;
+}
+
+@ArgsType()
+export class UpdateManyMonitorLogArgs {
+    @Field(() => MonitorLogUpdateManyMutationInput, {nullable:false})
+    @Type(() => MonitorLogUpdateManyMutationInput)
+    data!: InstanceType<typeof MonitorLogUpdateManyMutationInput>;
+    @Field(() => MonitorLogWhereInput, {nullable:true})
+    @Type(() => MonitorLogWhereInput)
+    where?: InstanceType<typeof MonitorLogWhereInput>;
+}
+
+@ArgsType()
+export class UpdateOneMonitorLogArgs {
+    @Field(() => MonitorLogUpdateInput, {nullable:false})
+    @Type(() => MonitorLogUpdateInput)
+    data!: InstanceType<typeof MonitorLogUpdateInput>;
+    @Field(() => MonitorLogWhereUniqueInput, {nullable:false})
+    @Type(() => MonitorLogWhereUniqueInput)
+    where!: Prisma.AtLeast<MonitorLogWhereUniqueInput, 'id'>;
+}
+
+@ArgsType()
+export class UpsertOneMonitorLogArgs {
+    @Field(() => MonitorLogWhereUniqueInput, {nullable:false})
+    @Type(() => MonitorLogWhereUniqueInput)
+    where!: Prisma.AtLeast<MonitorLogWhereUniqueInput, 'id'>;
+    @Field(() => MonitorLogCreateInput, {nullable:false})
+    @Type(() => MonitorLogCreateInput)
+    create!: InstanceType<typeof MonitorLogCreateInput>;
+    @Field(() => MonitorLogUpdateInput, {nullable:false})
+    @Type(() => MonitorLogUpdateInput)
+    update!: InstanceType<typeof MonitorLogUpdateInput>;
+}
+
+@ObjectType()
+export class AggregateMonitorStat {
+    @Field(() => MonitorStatCountAggregate, {nullable:true})
+    _count?: InstanceType<typeof MonitorStatCountAggregate>;
+    @Field(() => MonitorStatAvgAggregate, {nullable:true})
+    _avg?: InstanceType<typeof MonitorStatAvgAggregate>;
+    @Field(() => MonitorStatSumAggregate, {nullable:true})
+    _sum?: InstanceType<typeof MonitorStatSumAggregate>;
+    @Field(() => MonitorStatMinAggregate, {nullable:true})
+    _min?: InstanceType<typeof MonitorStatMinAggregate>;
+    @Field(() => MonitorStatMaxAggregate, {nullable:true})
+    _max?: InstanceType<typeof MonitorStatMaxAggregate>;
+}
+
+@ArgsType()
+export class CreateManyMonitorStatArgs {
+    @Field(() => [MonitorStatCreateManyInput], {nullable:false})
+    @Type(() => MonitorStatCreateManyInput)
+    data!: Array<MonitorStatCreateManyInput>;
+    @Field(() => Boolean, {nullable:true})
+    skipDuplicates?: boolean;
+}
+
+@ArgsType()
+export class CreateOneMonitorStatArgs {
+    @Field(() => MonitorStatCreateInput, {nullable:false})
+    @Type(() => MonitorStatCreateInput)
+    data!: InstanceType<typeof MonitorStatCreateInput>;
+}
+
+@ArgsType()
+export class DeleteManyMonitorStatArgs {
+    @Field(() => MonitorStatWhereInput, {nullable:true})
+    @Type(() => MonitorStatWhereInput)
+    where?: InstanceType<typeof MonitorStatWhereInput>;
+}
+
+@ArgsType()
+export class DeleteOneMonitorStatArgs {
+    @Field(() => MonitorStatWhereUniqueInput, {nullable:false})
+    @Type(() => MonitorStatWhereUniqueInput)
+    where!: Prisma.AtLeast<MonitorStatWhereUniqueInput, 'id' | 'parserId_createdAt'>;
+}
+
+@ArgsType()
+export class FindFirstMonitorStatOrThrowArgs {
+    @Field(() => MonitorStatWhereInput, {nullable:true})
+    @Type(() => MonitorStatWhereInput)
+    where?: InstanceType<typeof MonitorStatWhereInput>;
+    @Field(() => [MonitorStatOrderByWithRelationInput], {nullable:true})
+    orderBy?: Array<MonitorStatOrderByWithRelationInput>;
+    @Field(() => MonitorStatWhereUniqueInput, {nullable:true})
+    cursor?: Prisma.AtLeast<MonitorStatWhereUniqueInput, 'id' | 'parserId_createdAt'>;
+    @Field(() => Int, {nullable:true})
+    take?: number;
+    @Field(() => Int, {nullable:true})
+    skip?: number;
+    @Field(() => [MonitorStatScalarFieldEnum], {nullable:true})
+    distinct?: Array<keyof typeof MonitorStatScalarFieldEnum>;
+}
+
+@ArgsType()
+export class FindFirstMonitorStatArgs {
+    @Field(() => MonitorStatWhereInput, {nullable:true})
+    @Type(() => MonitorStatWhereInput)
+    where?: InstanceType<typeof MonitorStatWhereInput>;
+    @Field(() => [MonitorStatOrderByWithRelationInput], {nullable:true})
+    orderBy?: Array<MonitorStatOrderByWithRelationInput>;
+    @Field(() => MonitorStatWhereUniqueInput, {nullable:true})
+    cursor?: Prisma.AtLeast<MonitorStatWhereUniqueInput, 'id' | 'parserId_createdAt'>;
+    @Field(() => Int, {nullable:true})
+    take?: number;
+    @Field(() => Int, {nullable:true})
+    skip?: number;
+    @Field(() => [MonitorStatScalarFieldEnum], {nullable:true})
+    distinct?: Array<keyof typeof MonitorStatScalarFieldEnum>;
+}
+
+@ArgsType()
+export class FindManyMonitorStatArgs {
+    @Field(() => MonitorStatWhereInput, {nullable:true})
+    @Type(() => MonitorStatWhereInput)
+    where?: InstanceType<typeof MonitorStatWhereInput>;
+    @Field(() => [MonitorStatOrderByWithRelationInput], {nullable:true})
+    orderBy?: Array<MonitorStatOrderByWithRelationInput>;
+    @Field(() => MonitorStatWhereUniqueInput, {nullable:true})
+    cursor?: Prisma.AtLeast<MonitorStatWhereUniqueInput, 'id' | 'parserId_createdAt'>;
+    @Field(() => Int, {nullable:true})
+    take?: number;
+    @Field(() => Int, {nullable:true})
+    skip?: number;
+    @Field(() => [MonitorStatScalarFieldEnum], {nullable:true})
+    distinct?: Array<keyof typeof MonitorStatScalarFieldEnum>;
+}
+
+@ArgsType()
+export class FindUniqueMonitorStatOrThrowArgs {
+    @Field(() => MonitorStatWhereUniqueInput, {nullable:false})
+    @Type(() => MonitorStatWhereUniqueInput)
+    where!: Prisma.AtLeast<MonitorStatWhereUniqueInput, 'id' | 'parserId_createdAt'>;
+}
+
+@ArgsType()
+export class FindUniqueMonitorStatArgs {
+    @Field(() => MonitorStatWhereUniqueInput, {nullable:false})
+    @Type(() => MonitorStatWhereUniqueInput)
+    where!: Prisma.AtLeast<MonitorStatWhereUniqueInput, 'id' | 'parserId_createdAt'>;
+}
+
+@ArgsType()
+export class MonitorStatAggregateArgs {
+    @Field(() => MonitorStatWhereInput, {nullable:true})
+    @Type(() => MonitorStatWhereInput)
+    where?: InstanceType<typeof MonitorStatWhereInput>;
+    @Field(() => [MonitorStatOrderByWithRelationInput], {nullable:true})
+    orderBy?: Array<MonitorStatOrderByWithRelationInput>;
+    @Field(() => MonitorStatWhereUniqueInput, {nullable:true})
+    cursor?: Prisma.AtLeast<MonitorStatWhereUniqueInput, 'id' | 'parserId_createdAt'>;
+    @Field(() => Int, {nullable:true})
+    take?: number;
+    @Field(() => Int, {nullable:true})
+    skip?: number;
+    @Field(() => MonitorStatCountAggregateInput, {nullable:true})
+    _count?: InstanceType<typeof MonitorStatCountAggregateInput>;
+    @Field(() => MonitorStatAvgAggregateInput, {nullable:true})
+    _avg?: InstanceType<typeof MonitorStatAvgAggregateInput>;
+    @Field(() => MonitorStatSumAggregateInput, {nullable:true})
+    _sum?: InstanceType<typeof MonitorStatSumAggregateInput>;
+    @Field(() => MonitorStatMinAggregateInput, {nullable:true})
+    _min?: InstanceType<typeof MonitorStatMinAggregateInput>;
+    @Field(() => MonitorStatMaxAggregateInput, {nullable:true})
+    _max?: InstanceType<typeof MonitorStatMaxAggregateInput>;
+}
+
+@InputType()
+export class MonitorStatAvgAggregateInput {
+    @Field(() => Boolean, {nullable:true})
+    currentProcessing?: true;
+    @Field(() => Boolean, {nullable:true})
+    errors?: true;
+    @Field(() => Boolean, {nullable:true})
+    errorsMax?: true;
+    @Field(() => Boolean, {nullable:true})
+    rssMb?: true;
+    @Field(() => Boolean, {nullable:true})
+    heapMb?: true;
+    @Field(() => Boolean, {nullable:true})
+    heapMaxMb?: true;
+    @Field(() => Boolean, {nullable:true})
+    externalMb?: true;
+    @Field(() => Boolean, {nullable:true})
+    sighup?: true;
+    @Field(() => Boolean, {nullable:true})
+    sigint?: true;
+    @Field(() => Boolean, {nullable:true})
+    sigterm?: true;
+}
+
+@ObjectType()
+export class MonitorStatAvgAggregate {
+    @Field(() => Float, {nullable:true})
+    currentProcessing?: number;
+    @Field(() => Float, {nullable:true})
+    errors?: number;
+    @Field(() => Float, {nullable:true})
+    errorsMax?: number;
+    @Field(() => Float, {nullable:true})
+    rssMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMaxMb?: number;
+    @Field(() => Float, {nullable:true})
+    externalMb?: number;
+    @Field(() => Float, {nullable:true})
+    sighup?: number;
+    @Field(() => Float, {nullable:true})
+    sigint?: number;
+    @Field(() => Float, {nullable:true})
+    sigterm?: number;
+}
+
+@InputType()
+export class MonitorStatAvgOrderByAggregateInput {
+    @Field(() => SortOrder, {nullable:true})
+    currentProcessing?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    errors?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    errorsMax?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    rssMb?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    heapMb?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    heapMaxMb?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    externalMb?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    sighup?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    sigint?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    sigterm?: keyof typeof SortOrder;
+}
+
+@InputType()
+export class MonitorStatCountAggregateInput {
+    @Field(() => Boolean, {nullable:true})
+    id?: true;
+    @Field(() => Boolean, {nullable:true})
+    parserId?: true;
+    @Field(() => Boolean, {nullable:true})
+    createdAt?: true;
+    @Field(() => Boolean, {nullable:true})
+    currentProcessing?: true;
+    @Field(() => Boolean, {nullable:true})
+    errors?: true;
+    @Field(() => Boolean, {nullable:true})
+    errorsMax?: true;
+    @Field(() => Boolean, {nullable:true})
+    rssMb?: true;
+    @Field(() => Boolean, {nullable:true})
+    heapMb?: true;
+    @Field(() => Boolean, {nullable:true})
+    heapMaxMb?: true;
+    @Field(() => Boolean, {nullable:true})
+    externalMb?: true;
+    @Field(() => Boolean, {nullable:true})
+    sighup?: true;
+    @Field(() => Boolean, {nullable:true})
+    sigint?: true;
+    @Field(() => Boolean, {nullable:true})
+    sigterm?: true;
+    @Field(() => Boolean, {nullable:true})
+    _all?: true;
+}
+
+@ObjectType()
+export class MonitorStatCountAggregate {
+    @Field(() => Int, {nullable:false})
+    id!: number;
+    @Field(() => Int, {nullable:false})
+    parserId!: number;
+    @Field(() => Int, {nullable:false})
+    createdAt!: number;
+    @Field(() => Int, {nullable:false})
+    currentProcessing!: number;
+    @Field(() => Int, {nullable:false})
+    errors!: number;
+    @Field(() => Int, {nullable:false})
+    errorsMax!: number;
+    @Field(() => Int, {nullable:false})
+    rssMb!: number;
+    @Field(() => Int, {nullable:false})
+    heapMb!: number;
+    @Field(() => Int, {nullable:false})
+    heapMaxMb!: number;
+    @Field(() => Int, {nullable:false})
+    externalMb!: number;
+    @Field(() => Int, {nullable:false})
+    sighup!: number;
+    @Field(() => Int, {nullable:false})
+    sigint!: number;
+    @Field(() => Int, {nullable:false})
+    sigterm!: number;
+    @Field(() => Int, {nullable:false})
+    _all!: number;
+}
+
+@InputType()
+export class MonitorStatCountOrderByAggregateInput {
+    @Field(() => SortOrder, {nullable:true})
+    id?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    parserId?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    createdAt?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    currentProcessing?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    errors?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    errorsMax?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    rssMb?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    heapMb?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    heapMaxMb?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    externalMb?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    sighup?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    sigint?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    sigterm?: keyof typeof SortOrder;
+}
+
+@InputType()
+export class MonitorStatCreateManyInput {
+    @Field(() => String, {nullable:true})
+    id?: string;
+    @Field(() => String, {nullable:false})
+    parserId!: string;
+    @Field(() => Date, {nullable:true})
+    createdAt?: Date | string;
+    @Field(() => Int, {nullable:true})
+    currentProcessing?: number;
+    @Field(() => Int, {nullable:true})
+    errors?: number;
+    @Field(() => Int, {nullable:true})
+    errorsMax?: number;
+    @Field(() => Float, {nullable:true})
+    rssMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMaxMb?: number;
+    @Field(() => Float, {nullable:true})
+    externalMb?: number;
+    @Field(() => Int, {nullable:true})
+    sighup?: number;
+    @Field(() => Int, {nullable:true})
+    sigint?: number;
+    @Field(() => Int, {nullable:true})
+    sigterm?: number;
+}
+
+@InputType()
+export class MonitorStatCreateInput {
+    @Field(() => String, {nullable:true})
+    id?: string;
+    @Field(() => String, {nullable:false})
+    parserId!: string;
+    @Field(() => Date, {nullable:true})
+    createdAt?: Date | string;
+    @Field(() => Int, {nullable:true})
+    currentProcessing?: number;
+    @Field(() => Int, {nullable:true})
+    errors?: number;
+    @Field(() => Int, {nullable:true})
+    errorsMax?: number;
+    @Field(() => Float, {nullable:true})
+    rssMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMaxMb?: number;
+    @Field(() => Float, {nullable:true})
+    externalMb?: number;
+    @Field(() => Int, {nullable:true})
+    sighup?: number;
+    @Field(() => Int, {nullable:true})
+    sigint?: number;
+    @Field(() => Int, {nullable:true})
+    sigterm?: number;
+}
+
+@ArgsType()
+export class MonitorStatGroupByArgs {
+    @Field(() => MonitorStatWhereInput, {nullable:true})
+    @Type(() => MonitorStatWhereInput)
+    where?: InstanceType<typeof MonitorStatWhereInput>;
+    @Field(() => [MonitorStatOrderByWithAggregationInput], {nullable:true})
+    orderBy?: Array<MonitorStatOrderByWithAggregationInput>;
+    @Field(() => [MonitorStatScalarFieldEnum], {nullable:false})
+    by!: Array<keyof typeof MonitorStatScalarFieldEnum>;
+    @Field(() => MonitorStatScalarWhereWithAggregatesInput, {nullable:true})
+    having?: InstanceType<typeof MonitorStatScalarWhereWithAggregatesInput>;
+    @Field(() => Int, {nullable:true})
+    take?: number;
+    @Field(() => Int, {nullable:true})
+    skip?: number;
+    @Field(() => MonitorStatCountAggregateInput, {nullable:true})
+    _count?: InstanceType<typeof MonitorStatCountAggregateInput>;
+    @Field(() => MonitorStatAvgAggregateInput, {nullable:true})
+    _avg?: InstanceType<typeof MonitorStatAvgAggregateInput>;
+    @Field(() => MonitorStatSumAggregateInput, {nullable:true})
+    _sum?: InstanceType<typeof MonitorStatSumAggregateInput>;
+    @Field(() => MonitorStatMinAggregateInput, {nullable:true})
+    _min?: InstanceType<typeof MonitorStatMinAggregateInput>;
+    @Field(() => MonitorStatMaxAggregateInput, {nullable:true})
+    _max?: InstanceType<typeof MonitorStatMaxAggregateInput>;
+}
+
+@ObjectType()
+export class MonitorStatGroupBy {
+    @Field(() => String, {nullable:false})
+    id!: string;
+    @Field(() => String, {nullable:false})
+    parserId!: string;
+    @Field(() => Date, {nullable:false})
+    createdAt!: Date | string;
+    @Field(() => Int, {nullable:true})
+    currentProcessing?: number;
+    @Field(() => Int, {nullable:true})
+    errors?: number;
+    @Field(() => Int, {nullable:true})
+    errorsMax?: number;
+    @Field(() => Float, {nullable:true})
+    rssMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMaxMb?: number;
+    @Field(() => Float, {nullable:true})
+    externalMb?: number;
+    @Field(() => Int, {nullable:true})
+    sighup?: number;
+    @Field(() => Int, {nullable:true})
+    sigint?: number;
+    @Field(() => Int, {nullable:true})
+    sigterm?: number;
+    @Field(() => MonitorStatCountAggregate, {nullable:true})
+    _count?: InstanceType<typeof MonitorStatCountAggregate>;
+    @Field(() => MonitorStatAvgAggregate, {nullable:true})
+    _avg?: InstanceType<typeof MonitorStatAvgAggregate>;
+    @Field(() => MonitorStatSumAggregate, {nullable:true})
+    _sum?: InstanceType<typeof MonitorStatSumAggregate>;
+    @Field(() => MonitorStatMinAggregate, {nullable:true})
+    _min?: InstanceType<typeof MonitorStatMinAggregate>;
+    @Field(() => MonitorStatMaxAggregate, {nullable:true})
+    _max?: InstanceType<typeof MonitorStatMaxAggregate>;
+}
+
+@InputType()
+export class MonitorStatMaxAggregateInput {
+    @Field(() => Boolean, {nullable:true})
+    id?: true;
+    @Field(() => Boolean, {nullable:true})
+    parserId?: true;
+    @Field(() => Boolean, {nullable:true})
+    createdAt?: true;
+    @Field(() => Boolean, {nullable:true})
+    currentProcessing?: true;
+    @Field(() => Boolean, {nullable:true})
+    errors?: true;
+    @Field(() => Boolean, {nullable:true})
+    errorsMax?: true;
+    @Field(() => Boolean, {nullable:true})
+    rssMb?: true;
+    @Field(() => Boolean, {nullable:true})
+    heapMb?: true;
+    @Field(() => Boolean, {nullable:true})
+    heapMaxMb?: true;
+    @Field(() => Boolean, {nullable:true})
+    externalMb?: true;
+    @Field(() => Boolean, {nullable:true})
+    sighup?: true;
+    @Field(() => Boolean, {nullable:true})
+    sigint?: true;
+    @Field(() => Boolean, {nullable:true})
+    sigterm?: true;
+}
+
+@ObjectType()
+export class MonitorStatMaxAggregate {
+    @Field(() => String, {nullable:true})
+    id?: string;
+    @Field(() => String, {nullable:true})
+    parserId?: string;
+    @Field(() => Date, {nullable:true})
+    createdAt?: Date | string;
+    @Field(() => Int, {nullable:true})
+    currentProcessing?: number;
+    @Field(() => Int, {nullable:true})
+    errors?: number;
+    @Field(() => Int, {nullable:true})
+    errorsMax?: number;
+    @Field(() => Float, {nullable:true})
+    rssMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMaxMb?: number;
+    @Field(() => Float, {nullable:true})
+    externalMb?: number;
+    @Field(() => Int, {nullable:true})
+    sighup?: number;
+    @Field(() => Int, {nullable:true})
+    sigint?: number;
+    @Field(() => Int, {nullable:true})
+    sigterm?: number;
+}
+
+@InputType()
+export class MonitorStatMaxOrderByAggregateInput {
+    @Field(() => SortOrder, {nullable:true})
+    id?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    parserId?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    createdAt?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    currentProcessing?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    errors?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    errorsMax?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    rssMb?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    heapMb?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    heapMaxMb?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    externalMb?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    sighup?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    sigint?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    sigterm?: keyof typeof SortOrder;
+}
+
+@InputType()
+export class MonitorStatMinAggregateInput {
+    @Field(() => Boolean, {nullable:true})
+    id?: true;
+    @Field(() => Boolean, {nullable:true})
+    parserId?: true;
+    @Field(() => Boolean, {nullable:true})
+    createdAt?: true;
+    @Field(() => Boolean, {nullable:true})
+    currentProcessing?: true;
+    @Field(() => Boolean, {nullable:true})
+    errors?: true;
+    @Field(() => Boolean, {nullable:true})
+    errorsMax?: true;
+    @Field(() => Boolean, {nullable:true})
+    rssMb?: true;
+    @Field(() => Boolean, {nullable:true})
+    heapMb?: true;
+    @Field(() => Boolean, {nullable:true})
+    heapMaxMb?: true;
+    @Field(() => Boolean, {nullable:true})
+    externalMb?: true;
+    @Field(() => Boolean, {nullable:true})
+    sighup?: true;
+    @Field(() => Boolean, {nullable:true})
+    sigint?: true;
+    @Field(() => Boolean, {nullable:true})
+    sigterm?: true;
+}
+
+@ObjectType()
+export class MonitorStatMinAggregate {
+    @Field(() => String, {nullable:true})
+    id?: string;
+    @Field(() => String, {nullable:true})
+    parserId?: string;
+    @Field(() => Date, {nullable:true})
+    createdAt?: Date | string;
+    @Field(() => Int, {nullable:true})
+    currentProcessing?: number;
+    @Field(() => Int, {nullable:true})
+    errors?: number;
+    @Field(() => Int, {nullable:true})
+    errorsMax?: number;
+    @Field(() => Float, {nullable:true})
+    rssMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMaxMb?: number;
+    @Field(() => Float, {nullable:true})
+    externalMb?: number;
+    @Field(() => Int, {nullable:true})
+    sighup?: number;
+    @Field(() => Int, {nullable:true})
+    sigint?: number;
+    @Field(() => Int, {nullable:true})
+    sigterm?: number;
+}
+
+@InputType()
+export class MonitorStatMinOrderByAggregateInput {
+    @Field(() => SortOrder, {nullable:true})
+    id?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    parserId?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    createdAt?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    currentProcessing?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    errors?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    errorsMax?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    rssMb?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    heapMb?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    heapMaxMb?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    externalMb?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    sighup?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    sigint?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    sigterm?: keyof typeof SortOrder;
+}
+
+@InputType()
+export class MonitorStatOrderByWithAggregationInput {
+    @Field(() => SortOrder, {nullable:true})
+    id?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    parserId?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    createdAt?: keyof typeof SortOrder;
+    @Field(() => SortOrderInput, {nullable:true})
+    currentProcessing?: InstanceType<typeof SortOrderInput>;
+    @Field(() => SortOrderInput, {nullable:true})
+    errors?: InstanceType<typeof SortOrderInput>;
+    @Field(() => SortOrderInput, {nullable:true})
+    errorsMax?: InstanceType<typeof SortOrderInput>;
+    @Field(() => SortOrderInput, {nullable:true})
+    rssMb?: InstanceType<typeof SortOrderInput>;
+    @Field(() => SortOrderInput, {nullable:true})
+    heapMb?: InstanceType<typeof SortOrderInput>;
+    @Field(() => SortOrderInput, {nullable:true})
+    heapMaxMb?: InstanceType<typeof SortOrderInput>;
+    @Field(() => SortOrderInput, {nullable:true})
+    externalMb?: InstanceType<typeof SortOrderInput>;
+    @Field(() => SortOrderInput, {nullable:true})
+    sighup?: InstanceType<typeof SortOrderInput>;
+    @Field(() => SortOrderInput, {nullable:true})
+    sigint?: InstanceType<typeof SortOrderInput>;
+    @Field(() => SortOrderInput, {nullable:true})
+    sigterm?: InstanceType<typeof SortOrderInput>;
+    @Field(() => MonitorStatCountOrderByAggregateInput, {nullable:true})
+    _count?: InstanceType<typeof MonitorStatCountOrderByAggregateInput>;
+    @Field(() => MonitorStatAvgOrderByAggregateInput, {nullable:true})
+    _avg?: InstanceType<typeof MonitorStatAvgOrderByAggregateInput>;
+    @Field(() => MonitorStatMaxOrderByAggregateInput, {nullable:true})
+    _max?: InstanceType<typeof MonitorStatMaxOrderByAggregateInput>;
+    @Field(() => MonitorStatMinOrderByAggregateInput, {nullable:true})
+    _min?: InstanceType<typeof MonitorStatMinOrderByAggregateInput>;
+    @Field(() => MonitorStatSumOrderByAggregateInput, {nullable:true})
+    _sum?: InstanceType<typeof MonitorStatSumOrderByAggregateInput>;
+}
+
+@InputType()
+export class MonitorStatOrderByWithRelationInput {
+    @Field(() => SortOrder, {nullable:true})
+    id?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    parserId?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    createdAt?: keyof typeof SortOrder;
+    @Field(() => SortOrderInput, {nullable:true})
+    currentProcessing?: InstanceType<typeof SortOrderInput>;
+    @Field(() => SortOrderInput, {nullable:true})
+    errors?: InstanceType<typeof SortOrderInput>;
+    @Field(() => SortOrderInput, {nullable:true})
+    errorsMax?: InstanceType<typeof SortOrderInput>;
+    @Field(() => SortOrderInput, {nullable:true})
+    rssMb?: InstanceType<typeof SortOrderInput>;
+    @Field(() => SortOrderInput, {nullable:true})
+    heapMb?: InstanceType<typeof SortOrderInput>;
+    @Field(() => SortOrderInput, {nullable:true})
+    heapMaxMb?: InstanceType<typeof SortOrderInput>;
+    @Field(() => SortOrderInput, {nullable:true})
+    externalMb?: InstanceType<typeof SortOrderInput>;
+    @Field(() => SortOrderInput, {nullable:true})
+    sighup?: InstanceType<typeof SortOrderInput>;
+    @Field(() => SortOrderInput, {nullable:true})
+    sigint?: InstanceType<typeof SortOrderInput>;
+    @Field(() => SortOrderInput, {nullable:true})
+    sigterm?: InstanceType<typeof SortOrderInput>;
+}
+
+@InputType()
+export class MonitorStatParserIdCreatedAtCompoundUniqueInput {
+    @Field(() => String, {nullable:false})
+    parserId!: string;
+    @Field(() => Date, {nullable:false})
+    createdAt!: Date | string;
+}
+
+@InputType()
+export class MonitorStatScalarWhereWithAggregatesInput {
+    @Field(() => [MonitorStatScalarWhereWithAggregatesInput], {nullable:true})
+    AND?: Array<MonitorStatScalarWhereWithAggregatesInput>;
+    @Field(() => [MonitorStatScalarWhereWithAggregatesInput], {nullable:true})
+    OR?: Array<MonitorStatScalarWhereWithAggregatesInput>;
+    @Field(() => [MonitorStatScalarWhereWithAggregatesInput], {nullable:true})
+    NOT?: Array<MonitorStatScalarWhereWithAggregatesInput>;
+    @Field(() => StringWithAggregatesFilter, {nullable:true})
+    id?: InstanceType<typeof StringWithAggregatesFilter>;
+    @Field(() => StringWithAggregatesFilter, {nullable:true})
+    parserId?: InstanceType<typeof StringWithAggregatesFilter>;
+    @Field(() => DateTimeWithAggregatesFilter, {nullable:true})
+    createdAt?: InstanceType<typeof DateTimeWithAggregatesFilter>;
+    @Field(() => IntWithAggregatesFilter, {nullable:true})
+    currentProcessing?: InstanceType<typeof IntWithAggregatesFilter>;
+    @Field(() => IntWithAggregatesFilter, {nullable:true})
+    errors?: InstanceType<typeof IntWithAggregatesFilter>;
+    @Field(() => IntWithAggregatesFilter, {nullable:true})
+    errorsMax?: InstanceType<typeof IntWithAggregatesFilter>;
+    @Field(() => FloatWithAggregatesFilter, {nullable:true})
+    rssMb?: InstanceType<typeof FloatWithAggregatesFilter>;
+    @Field(() => FloatWithAggregatesFilter, {nullable:true})
+    heapMb?: InstanceType<typeof FloatWithAggregatesFilter>;
+    @Field(() => FloatWithAggregatesFilter, {nullable:true})
+    heapMaxMb?: InstanceType<typeof FloatWithAggregatesFilter>;
+    @Field(() => FloatWithAggregatesFilter, {nullable:true})
+    externalMb?: InstanceType<typeof FloatWithAggregatesFilter>;
+    @Field(() => IntWithAggregatesFilter, {nullable:true})
+    sighup?: InstanceType<typeof IntWithAggregatesFilter>;
+    @Field(() => IntWithAggregatesFilter, {nullable:true})
+    sigint?: InstanceType<typeof IntWithAggregatesFilter>;
+    @Field(() => IntWithAggregatesFilter, {nullable:true})
+    sigterm?: InstanceType<typeof IntWithAggregatesFilter>;
+}
+
+@InputType()
+export class MonitorStatSumAggregateInput {
+    @Field(() => Boolean, {nullable:true})
+    currentProcessing?: true;
+    @Field(() => Boolean, {nullable:true})
+    errors?: true;
+    @Field(() => Boolean, {nullable:true})
+    errorsMax?: true;
+    @Field(() => Boolean, {nullable:true})
+    rssMb?: true;
+    @Field(() => Boolean, {nullable:true})
+    heapMb?: true;
+    @Field(() => Boolean, {nullable:true})
+    heapMaxMb?: true;
+    @Field(() => Boolean, {nullable:true})
+    externalMb?: true;
+    @Field(() => Boolean, {nullable:true})
+    sighup?: true;
+    @Field(() => Boolean, {nullable:true})
+    sigint?: true;
+    @Field(() => Boolean, {nullable:true})
+    sigterm?: true;
+}
+
+@ObjectType()
+export class MonitorStatSumAggregate {
+    @Field(() => Int, {nullable:true})
+    currentProcessing?: number;
+    @Field(() => Int, {nullable:true})
+    errors?: number;
+    @Field(() => Int, {nullable:true})
+    errorsMax?: number;
+    @Field(() => Float, {nullable:true})
+    rssMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMaxMb?: number;
+    @Field(() => Float, {nullable:true})
+    externalMb?: number;
+    @Field(() => Int, {nullable:true})
+    sighup?: number;
+    @Field(() => Int, {nullable:true})
+    sigint?: number;
+    @Field(() => Int, {nullable:true})
+    sigterm?: number;
+}
+
+@InputType()
+export class MonitorStatSumOrderByAggregateInput {
+    @Field(() => SortOrder, {nullable:true})
+    currentProcessing?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    errors?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    errorsMax?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    rssMb?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    heapMb?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    heapMaxMb?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    externalMb?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    sighup?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    sigint?: keyof typeof SortOrder;
+    @Field(() => SortOrder, {nullable:true})
+    sigterm?: keyof typeof SortOrder;
+}
+
+@InputType()
+export class MonitorStatUncheckedCreateInput {
+    @Field(() => String, {nullable:true})
+    id?: string;
+    @Field(() => String, {nullable:false})
+    parserId!: string;
+    @Field(() => Date, {nullable:true})
+    createdAt?: Date | string;
+    @Field(() => Int, {nullable:true})
+    currentProcessing?: number;
+    @Field(() => Int, {nullable:true})
+    errors?: number;
+    @Field(() => Int, {nullable:true})
+    errorsMax?: number;
+    @Field(() => Float, {nullable:true})
+    rssMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMaxMb?: number;
+    @Field(() => Float, {nullable:true})
+    externalMb?: number;
+    @Field(() => Int, {nullable:true})
+    sighup?: number;
+    @Field(() => Int, {nullable:true})
+    sigint?: number;
+    @Field(() => Int, {nullable:true})
+    sigterm?: number;
+}
+
+@InputType()
+export class MonitorStatUncheckedUpdateManyInput {
+    @Field(() => String, {nullable:true})
+    id?: string;
+    @Field(() => String, {nullable:true})
+    parserId?: string;
+    @Field(() => Date, {nullable:true})
+    createdAt?: Date | string;
+    @Field(() => Int, {nullable:true})
+    currentProcessing?: number;
+    @Field(() => Int, {nullable:true})
+    errors?: number;
+    @Field(() => Int, {nullable:true})
+    errorsMax?: number;
+    @Field(() => Float, {nullable:true})
+    rssMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMaxMb?: number;
+    @Field(() => Float, {nullable:true})
+    externalMb?: number;
+    @Field(() => Int, {nullable:true})
+    sighup?: number;
+    @Field(() => Int, {nullable:true})
+    sigint?: number;
+    @Field(() => Int, {nullable:true})
+    sigterm?: number;
+}
+
+@InputType()
+export class MonitorStatUncheckedUpdateInput {
+    @Field(() => String, {nullable:true})
+    id?: string;
+    @Field(() => String, {nullable:true})
+    parserId?: string;
+    @Field(() => Date, {nullable:true})
+    createdAt?: Date | string;
+    @Field(() => Int, {nullable:true})
+    currentProcessing?: number;
+    @Field(() => Int, {nullable:true})
+    errors?: number;
+    @Field(() => Int, {nullable:true})
+    errorsMax?: number;
+    @Field(() => Float, {nullable:true})
+    rssMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMaxMb?: number;
+    @Field(() => Float, {nullable:true})
+    externalMb?: number;
+    @Field(() => Int, {nullable:true})
+    sighup?: number;
+    @Field(() => Int, {nullable:true})
+    sigint?: number;
+    @Field(() => Int, {nullable:true})
+    sigterm?: number;
+}
+
+@InputType()
+export class MonitorStatUpdateManyMutationInput {
+    @Field(() => String, {nullable:true})
+    id?: string;
+    @Field(() => String, {nullable:true})
+    parserId?: string;
+    @Field(() => Date, {nullable:true})
+    createdAt?: Date | string;
+    @Field(() => Int, {nullable:true})
+    currentProcessing?: number;
+    @Field(() => Int, {nullable:true})
+    errors?: number;
+    @Field(() => Int, {nullable:true})
+    errorsMax?: number;
+    @Field(() => Float, {nullable:true})
+    rssMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMaxMb?: number;
+    @Field(() => Float, {nullable:true})
+    externalMb?: number;
+    @Field(() => Int, {nullable:true})
+    sighup?: number;
+    @Field(() => Int, {nullable:true})
+    sigint?: number;
+    @Field(() => Int, {nullable:true})
+    sigterm?: number;
+}
+
+@InputType()
+export class MonitorStatUpdateInput {
+    @Field(() => String, {nullable:true})
+    id?: string;
+    @Field(() => String, {nullable:true})
+    parserId?: string;
+    @Field(() => Date, {nullable:true})
+    createdAt?: Date | string;
+    @Field(() => Int, {nullable:true})
+    currentProcessing?: number;
+    @Field(() => Int, {nullable:true})
+    errors?: number;
+    @Field(() => Int, {nullable:true})
+    errorsMax?: number;
+    @Field(() => Float, {nullable:true})
+    rssMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMb?: number;
+    @Field(() => Float, {nullable:true})
+    heapMaxMb?: number;
+    @Field(() => Float, {nullable:true})
+    externalMb?: number;
+    @Field(() => Int, {nullable:true})
+    sighup?: number;
+    @Field(() => Int, {nullable:true})
+    sigint?: number;
+    @Field(() => Int, {nullable:true})
+    sigterm?: number;
+}
+
+@InputType()
+export class MonitorStatWhereUniqueInput {
+    @Field(() => String, {nullable:true})
+    id?: string;
+    @Field(() => MonitorStatParserIdCreatedAtCompoundUniqueInput, {nullable:true})
+    parserId_createdAt?: InstanceType<typeof MonitorStatParserIdCreatedAtCompoundUniqueInput>;
+    @Field(() => [MonitorStatWhereInput], {nullable:true})
+    AND?: Array<MonitorStatWhereInput>;
+    @Field(() => [MonitorStatWhereInput], {nullable:true})
+    OR?: Array<MonitorStatWhereInput>;
+    @Field(() => [MonitorStatWhereInput], {nullable:true})
+    NOT?: Array<MonitorStatWhereInput>;
+    @Field(() => StringFilter, {nullable:true})
+    parserId?: InstanceType<typeof StringFilter>;
+    @Field(() => DateTimeFilter, {nullable:true})
+    createdAt?: InstanceType<typeof DateTimeFilter>;
+    @Field(() => IntFilter, {nullable:true})
+    currentProcessing?: InstanceType<typeof IntFilter>;
+    @Field(() => IntFilter, {nullable:true})
+    errors?: InstanceType<typeof IntFilter>;
+    @Field(() => IntFilter, {nullable:true})
+    errorsMax?: InstanceType<typeof IntFilter>;
+    @Field(() => FloatFilter, {nullable:true})
+    rssMb?: InstanceType<typeof FloatFilter>;
+    @Field(() => FloatFilter, {nullable:true})
+    heapMb?: InstanceType<typeof FloatFilter>;
+    @Field(() => FloatFilter, {nullable:true})
+    heapMaxMb?: InstanceType<typeof FloatFilter>;
+    @Field(() => FloatFilter, {nullable:true})
+    externalMb?: InstanceType<typeof FloatFilter>;
+    @Field(() => IntFilter, {nullable:true})
+    sighup?: InstanceType<typeof IntFilter>;
+    @Field(() => IntFilter, {nullable:true})
+    sigint?: InstanceType<typeof IntFilter>;
+    @Field(() => IntFilter, {nullable:true})
+    sigterm?: InstanceType<typeof IntFilter>;
+}
+
+@InputType()
+export class MonitorStatWhereInput {
+    @Field(() => [MonitorStatWhereInput], {nullable:true})
+    AND?: Array<MonitorStatWhereInput>;
+    @Field(() => [MonitorStatWhereInput], {nullable:true})
+    OR?: Array<MonitorStatWhereInput>;
+    @Field(() => [MonitorStatWhereInput], {nullable:true})
+    NOT?: Array<MonitorStatWhereInput>;
+    @Field(() => StringFilter, {nullable:true})
+    id?: InstanceType<typeof StringFilter>;
+    @Field(() => StringFilter, {nullable:true})
+    parserId?: InstanceType<typeof StringFilter>;
+    @Field(() => DateTimeFilter, {nullable:true})
+    createdAt?: InstanceType<typeof DateTimeFilter>;
+    @Field(() => IntFilter, {nullable:true})
+    currentProcessing?: InstanceType<typeof IntFilter>;
+    @Field(() => IntFilter, {nullable:true})
+    errors?: InstanceType<typeof IntFilter>;
+    @Field(() => IntFilter, {nullable:true})
+    errorsMax?: InstanceType<typeof IntFilter>;
+    @Field(() => FloatFilter, {nullable:true})
+    rssMb?: InstanceType<typeof FloatFilter>;
+    @Field(() => FloatFilter, {nullable:true})
+    heapMb?: InstanceType<typeof FloatFilter>;
+    @Field(() => FloatFilter, {nullable:true})
+    heapMaxMb?: InstanceType<typeof FloatFilter>;
+    @Field(() => FloatFilter, {nullable:true})
+    externalMb?: InstanceType<typeof FloatFilter>;
+    @Field(() => IntFilter, {nullable:true})
+    sighup?: InstanceType<typeof IntFilter>;
+    @Field(() => IntFilter, {nullable:true})
+    sigint?: InstanceType<typeof IntFilter>;
+    @Field(() => IntFilter, {nullable:true})
+    sigterm?: InstanceType<typeof IntFilter>;
+}
+
+@ObjectType()
+export class MonitorStat {
+    @Field(() => ID, {nullable:false})
+    id!: string;
+    @Field(() => String, {nullable:false})
+    parserId!: string;
+    @Field(() => Date, {nullable:false})
+    createdAt!: Date;
+    @Field(() => Int, {nullable:true})
+    currentProcessing!: number | null;
+    @Field(() => Int, {nullable:true})
+    errors!: number | null;
+    @Field(() => Int, {nullable:true})
+    errorsMax!: number | null;
+    @Field(() => Float, {nullable:true})
+    rssMb!: number | null;
+    @Field(() => Float, {nullable:true})
+    heapMb!: number | null;
+    @Field(() => Float, {nullable:true})
+    heapMaxMb!: number | null;
+    @Field(() => Float, {nullable:true})
+    externalMb!: number | null;
+    @Field(() => Int, {nullable:true})
+    sighup!: number | null;
+    @Field(() => Int, {nullable:true})
+    sigint!: number | null;
+    @Field(() => Int, {nullable:true})
+    sigterm!: number | null;
+}
+
+@ArgsType()
+export class UpdateManyMonitorStatArgs {
+    @Field(() => MonitorStatUpdateManyMutationInput, {nullable:false})
+    @Type(() => MonitorStatUpdateManyMutationInput)
+    data!: InstanceType<typeof MonitorStatUpdateManyMutationInput>;
+    @Field(() => MonitorStatWhereInput, {nullable:true})
+    @Type(() => MonitorStatWhereInput)
+    where?: InstanceType<typeof MonitorStatWhereInput>;
+}
+
+@ArgsType()
+export class UpdateOneMonitorStatArgs {
+    @Field(() => MonitorStatUpdateInput, {nullable:false})
+    @Type(() => MonitorStatUpdateInput)
+    data!: InstanceType<typeof MonitorStatUpdateInput>;
+    @Field(() => MonitorStatWhereUniqueInput, {nullable:false})
+    @Type(() => MonitorStatWhereUniqueInput)
+    where!: Prisma.AtLeast<MonitorStatWhereUniqueInput, 'id' | 'parserId_createdAt'>;
+}
+
+@ArgsType()
+export class UpsertOneMonitorStatArgs {
+    @Field(() => MonitorStatWhereUniqueInput, {nullable:false})
+    @Type(() => MonitorStatWhereUniqueInput)
+    where!: Prisma.AtLeast<MonitorStatWhereUniqueInput, 'id' | 'parserId_createdAt'>;
+    @Field(() => MonitorStatCreateInput, {nullable:false})
+    @Type(() => MonitorStatCreateInput)
+    create!: InstanceType<typeof MonitorStatCreateInput>;
+    @Field(() => MonitorStatUpdateInput, {nullable:false})
+    @Type(() => MonitorStatUpdateInput)
+    update!: InstanceType<typeof MonitorStatUpdateInput>;
 }
 
 @ObjectType()
@@ -4143,6 +5794,36 @@ export class DateTimeWithAggregatesFilter {
     _min?: InstanceType<typeof DateTimeFilter>;
     @Field(() => DateTimeFilter, {nullable:true})
     _max?: InstanceType<typeof DateTimeFilter>;
+}
+
+@InputType()
+export class EnumMonitorLogTypeEnumFilter {
+    @Field(() => MonitorLogTypeEnum, {nullable:true})
+    equals?: keyof typeof MonitorLogTypeEnum;
+    @Field(() => [MonitorLogTypeEnum], {nullable:true})
+    in?: Array<keyof typeof MonitorLogTypeEnum>;
+    @Field(() => [MonitorLogTypeEnum], {nullable:true})
+    notIn?: Array<keyof typeof MonitorLogTypeEnum>;
+    @Field(() => EnumMonitorLogTypeEnumFilter, {nullable:true})
+    not?: InstanceType<typeof EnumMonitorLogTypeEnumFilter>;
+}
+
+@InputType()
+export class EnumMonitorLogTypeEnumWithAggregatesFilter {
+    @Field(() => MonitorLogTypeEnum, {nullable:true})
+    equals?: keyof typeof MonitorLogTypeEnum;
+    @Field(() => [MonitorLogTypeEnum], {nullable:true})
+    in?: Array<keyof typeof MonitorLogTypeEnum>;
+    @Field(() => [MonitorLogTypeEnum], {nullable:true})
+    notIn?: Array<keyof typeof MonitorLogTypeEnum>;
+    @Field(() => EnumMonitorLogTypeEnumWithAggregatesFilter, {nullable:true})
+    not?: InstanceType<typeof EnumMonitorLogTypeEnumWithAggregatesFilter>;
+    @Field(() => IntFilter, {nullable:true})
+    _count?: InstanceType<typeof IntFilter>;
+    @Field(() => EnumMonitorLogTypeEnumFilter, {nullable:true})
+    _min?: InstanceType<typeof EnumMonitorLogTypeEnumFilter>;
+    @Field(() => EnumMonitorLogTypeEnumFilter, {nullable:true})
+    _max?: InstanceType<typeof EnumMonitorLogTypeEnumFilter>;
 }
 
 @InputType()

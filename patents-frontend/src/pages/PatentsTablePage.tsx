@@ -19,7 +19,7 @@ import { CiSearch } from 'react-icons/ci';
 import { FaGoogle, FaYandexInternational } from 'react-icons/fa';
 import { useDebounce } from 'ahooks';
 
-export const PatentsTable: FC = () => {
+export const PatentsTablePage: FC = () => {
   const [pagination, setPagination] = useState({ take: 25, skip: 0 });
   const { data: { patentsCount = 0 } = {} } = usePatentsCountQuery();
   const [search, setSearch] = useState('');
