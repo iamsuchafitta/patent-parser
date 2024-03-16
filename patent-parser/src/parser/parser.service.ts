@@ -1,20 +1,27 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import ms from 'ms';
-import { MonitorLogTypeEnum, PatentParseQueue, PatentRelation, PatentRelationTypeEnum, Prisma } from '@prisma/client';
+import { PatentParseQueue, PatentRelation, PatentRelationTypeEnum, Prisma } from '@prisma/client';
 import { AppConfig } from '../common/app-config';
 import { AnonymousService } from '../anonymous/anonymous.service';
 import { merge } from 'lodash';
 import { Interval } from '@nestjs/schedule';
 import { PROCESSING_TIMEOUT } from '../app.constants';
 import parse from 'node-html-parser';
-import { EngineEnum, GooglePatentSelectors } from './parser.constants';
-import { WsEvents } from '../common/pub-sub/pub-sub.constants';
-import { AppEventEmitter } from '../common/pub-sub/app-event-emitter';
+import { GooglePatentSelectors } from './parser.constants';
 
+/**
+ * Сервис парсинга патентов.
+ * Обрабатывает очередь парсинга патентов с Google Patents.
+ * Парсит страницы патентов и сохраняет данные в БД.
+ */
 @Injectable()
 export class ParserService implements OnModuleInit {
+  private readonly logger = new Logger(ParserService.name);
+  /**
+   * Счетчик текущих обрабатываемых запросов.
+   */
   public currentProcessing: number = 0;
 
   constructor(
@@ -22,23 +29,36 @@ export class ParserService implements OnModuleInit {
     private readonly anonymous: AnonymousService,
   ) {}
 
+  /**
+   * Метод инициализации сервиса.
+   */
   async onModuleInit() {
+    // Мгновенно запускаем обработку очереди парсинга, чтобы не ждать 5 секунд.
     this.processQueue().then();
   }
 
+  /**
+   * Метод обработки очереди парсинга патентов.
+   * Вызывается при инициализации сервиса (в onModuleInit()) и каждые 5 секунд.
+   * @returns void - Ничего не возвращает.
+   */
   @Interval(ms('5s'))
   async processQueue() {
+    // Если количество обрабатываемых запросов превышает лимит, то ничего делать не нужно.
     if (this.currentProcessing >= AppConfig.concurrentRequests) return;
+    // Получение элементов очереди парсинга в одной транзакции.
     const queueElements = await this.prisma.$transaction(async tr => {
+      // Извлекаем необходимо кол-во элементов и блокируем их в БД.
+      // Игнорируем элементы, которые уже обрабатываются больше чем PROCESSING_TIMEOUT.
       const elements = await tr.$queryRaw<PatentParseQueue[]>`
           SELECT *
           FROM "PatentParseQueue"
           WHERE "startedAt" IS NULL
              OR "startedAt" <= ${PROCESSING_TIMEOUT.getDate()}::TIMESTAMPTZ
           ORDER BY "createdAt"
-          LIMIT ${AppConfig.concurrentRequests - this.currentProcessing}
-          FOR UPDATE SKIP LOCKED;
+          LIMIT ${AppConfig.concurrentRequests - this.currentProcessing} FOR UPDATE SKIP LOCKED;
       `;
+      // Обновляем время начала обработки и кол-во попыток.
       for (const elem of elements) {
         merge(elem, await tr.patentParseQueue.update({
           where: { url: elem.url },
@@ -50,32 +70,42 @@ export class ParserService implements OnModuleInit {
       }
       return elements;
     });
+    // Увеличиваем счетчик текущих обрабатываемых запросов.
     this.currentProcessing += queueElements.length;
-    AppEventEmitter.MonitorStatCreate();
+    // По каждому полученному элементу очереди начинаем парсинг.
     for (const qElement of queueElements) {
-      AppEventEmitter.MonitorLogCreated(MonitorLogTypeEnum.Info, `Processing... ${qElement.url}`);
+      this.logger.log(`Processing... ${qElement.url}`);
+      // parseGooglePatent - асинхронный метод, но здесь мы не ждём конца его выполнения.
       this.parseGooglePatent(qElement).then(async () => {
-        AppEventEmitter.MonitorLogCreated(MonitorLogTypeEnum.Info, `DONE! ${qElement.url}`);
+        this.logger.log(`DONE! ${qElement.url}`);
+        // При успешном завершении удаляем элемент из очереди.
         await this.prisma.patentParseQueue.delete({ where: { url: qElement.url } }).catch(() => null);
       }).catch(async (err) => {
-        AppEventEmitter.MonitorLogCreated(MonitorLogTypeEnum.Error, `Error processing ${qElement.url}, ${err.message}`);
-      }).finally(() => {
-        this.currentProcessing -= 1;
-      });
+        this.logger.error(`Error processing ${qElement.url}, ${err.message}`);
+        // В finally, независимо от успеха или ошибки: уменьшаем счетчик текущих обрабатываемых запросов.
+      }).finally(() => --this.currentProcessing);
+      // Во избежание перегрузки делаем паузу в 1 секунду перед обработкой следующего элемента.
       await new Promise((resolve) => setTimeout(resolve, ms('1s')));
     }
   }
 
-  public async parseGooglePatent(elem: PatentParseQueue, engine: EngineEnum = EngineEnum.Puppeteer) {
+  /**
+   * Метод парсинга патента с Google Patents
+   * Делает запрос по url, парсит страницу и сохраняет данные в БД.
+   * @param elem Элемент очереди парсинга.
+   * @returns void - Ничего не возвращает.
+   */
+  public async parseGooglePatent(elem: PatentParseQueue) {
+    // Функция выполняемая в браузере для клика по кнопке "Раскрыть классификации"
     const startCallback = () => {
       const moreClassifications = document.querySelector('classification-viewer.patent-result div.more:not([hidden])');
       if (moreClassifications) { // @ts-ignore
         moreClassifications.click();
       }
     };
+    // Выполнение запроса и получение HTML разметки страницы
     const root = parse(await this.anonymous.getHtml({
       url: elem.url,
-      engine,
       waitSelector: GooglePatentSelectors.Title,
       evaluate: startCallback,
     }));
@@ -145,6 +175,12 @@ export class ParserService implements OnModuleInit {
     }, relations);
   }
 
+  /**
+   * Метод сохранения патента в БД.
+   * @param patent Данные патента.
+   * @param relations Связи патента с другими патентами.
+   * @returns void - Ничего не возвращает.
+   */
   async savePatent(patent: Prisma.PatentCreateInput, relations: PatentRelation[]) {
     await this.prisma.$transaction(async tr => {
       await tr.patent.upsert({

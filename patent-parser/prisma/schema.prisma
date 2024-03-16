@@ -9,18 +9,6 @@ datasource db {
   extensions = [uuidOssp(map: "uuid-ossp")]
 }
 
-generator nestgraphql {
-  provider              = "node node_modules/prisma-nestjs-graphql"
-  output                = "../src/prisma/prisma-nestjs-graphql"
-  combineScalarFilters  = true
-  noAtomicOperations    = true
-  emitSingle            = true
-  purgeOutput           = true
-  fields_Scalars_from   = "graphql-scalars"
-  fields_Scalars_input  = true
-  fields_Scalars_output = true
-}
-
 /// Патент
 model Patent {
   /// Номер патента
@@ -109,42 +97,4 @@ model PatentParseQueue {
   // Служебные поля
   createdAt DateTime @default(now()) @db.Timestamptz
   updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz
-}
-
-model MonitorStat {
-  id String @id @default(dbgenerated("uuid_generate_v4()"))
-
-  parserId  String
-  createdAt DateTime @default(now()) @db.Timestamptz
-
-  currentProcessing Int?
-
-  errors    Int?
-  errorsMax Int?
-
-  rssMb      Float?
-  heapMb     Float?
-  heapMaxMb  Float?
-  externalMb Float?
-  sighup     Int?
-  sigint     Int?
-  sigterm    Int?
-
-  @@unique([parserId, createdAt])
-}
-
-enum MonitorLogTypeEnum {
-  Info
-  Warning
-  Error
-}
-
-model MonitorLog {
-  id String @id @default(dbgenerated("uuid_generate_v4()"))
-
-  parserId  String
-  createdAt DateTime @default(now()) @db.Timestamptz
-
-  type    MonitorLogTypeEnum
-  message String
 }

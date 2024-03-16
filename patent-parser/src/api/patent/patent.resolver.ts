@@ -1,17 +1,16 @@
-import { Args, Int, Mutation, Query, Resolver, Subscription } from '@nestjs/graphql';
-import { Patent, QueryMode } from '../../prisma/prisma-nestjs-graphql';
+import { Args, Int, Mutation, Resolver } from '@nestjs/graphql';
 import { PrismaService } from '../../prisma/prisma.service';
-import { PrismaSelector } from '../../prisma/decorators/prisma-selector.decorator';
 import { Prisma } from '@prisma/client';
-import { PaginationInput } from '../../common/gql/pagination.input';
-import { InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
+import { InternalServerErrorException, Logger } from '@nestjs/common';
 import { GraphQLURL } from 'graphql-scalars';
 import ms from 'ms';
 import Papa from 'papaparse';
 import { AnonymousService } from '../../anonymous/anonymous.service';
-import { WsEvents } from '../../common/pub-sub/pub-sub.constants';
-import { AppPubSub } from '../../common/pub-sub/pub-sub';
+import { AxiosError } from 'axios';
 
+/**
+ * Запросы к приложению на парсинг патентов
+ */
 @Resolver()
 export class PatentResolver {
   private readonly logger = new Logger(PatentResolver.name);
@@ -21,42 +20,10 @@ export class PatentResolver {
     private readonly anonymous: AnonymousService,
   ) {}
 
-  @Query(() => [Patent])
-  async patents(
-    @PrismaSelector() select: Prisma.PatentSelect,
-    @Args('search', { nullable: true }) search?: string,
-    @Args('pagination', { nullable: true }) pagination?: PaginationInput,
-  ): Promise<Patent[]> {
-    return this.prisma.patent.findMany({
-      skip: pagination?.skip || 0,
-      take: pagination?.take || 25,
-      select,
-      where: search ? {
-        OR: [
-          { id: { contains: search, mode: QueryMode.insensitive } },
-          { title: { contains: search, mode: QueryMode.insensitive } },
-          { abstract: { contains: search, mode: QueryMode.insensitive } },
-          { description: { contains: search, mode: QueryMode.insensitive } },
-        ],
-      } : undefined,
-    });
-  }
-
-  @Query(() => Int)
-  async patentsCount(): Promise<number> {
-    return this.prisma.patent.count();
-  }
-
-  @Query(() => Patent)
-  async patent(
-    @Args('id') id: string,
-    @PrismaSelector() select: Prisma.PatentSelect,
-  ): Promise<Patent> {
-    return this.prisma.patent.findUniqueOrThrow({ where: { id }, select }).catch(() => {
-      throw new NotFoundException('Patent not found');
-    });
-  }
-
+  /**
+   * Добавление патента в очередь на парсинг с приоритетом
+   * @param patentUrl - URL патента
+   */
   @Mutation(() => String, { description: 'Parse patent' })
   public async patentParse(
     @Args('patentUrl', { type: () => GraphQLURL }) patentUrl: string,
@@ -79,28 +46,38 @@ export class PatentResolver {
     return 'Added to the queue with priority';
   }
 
+  /**
+   * Добавление патентов в очередь на парсинг по поиску
+   * @param search - поисковый запрос
+   * @param isOrganisation - Если поиск не по ключевым словам в названии патента, а по имени организации
+   * @param ignoreExisting - Игнорировать патенты, которые уже есть в базе
+   */
   @Mutation(() => Int, { description: 'Add patents to parse queue by search' })
   public async patentsSearch(
     @Args('search') search: string,
     @Args('isOrganisation', { defaultValue: false }) isOrganisation: boolean,
     @Args('isIgnoreExisting', { defaultValue: true }) ignoreExisting: boolean = true,
   ): Promise<number> {
+    // Запрос на поиск патентов по организации или по запросу
     const param = isOrganisation ? 'assignee' : 'q';
     // https://patents.google.com/xhr/query?url=q%3Dколлайдер%26language%3DRUSSIAN&exp=&download=true
     const url = `https://patents.google.com/xhr/query?url=${param}%3D${search.trim()}%26language%3DRUSSIAN&exp=&download=true`;
     const axios = this.anonymous.startAxios();
     const csvString = await axios.get<string>(url).then((res) => res.data)
-      .catch(async (err) => {
+      .catch(async (err: AxiosError) => {
         // https://icanhazip.com
         // https://api.ipify.org
         // https://jsonip.com
         const ipAddress = await axios.get<string>('https://api.ipify.org').then((res) => res.data);
-        this.logger.error(`Error getting search results from ${ipAddress}: ${err.message}`);
         await this.anonymous.thereWasException();
+        this.logger.error(`Error getting search results from ${ipAddress}: ${err.message}`);
+        // console.log(util.inspect(err.request, { colors: true }));
         throw new InternalServerErrorException(`Error getting search results from ${ipAddress}: ${err.message}`);
       });
+    // Парсинг CSV, извлечение id и url патентов
     const csvParsed = Papa.parse(csvString, { header: false, skipEmptyLines: true });
     let patentsToParse = csvParsed.data.slice(2).map((row: string) => ({ id: row[0], url: row[8] }));
+    // Если нужно игнорировать существующие патенты, то убираем их из полученного списка
     if (ignoreExisting) {
       const patentsExisting = await this.prisma.patent.findMany({
         where: { id: { in: patentsToParse.map((p) => p.id) } },
@@ -108,16 +85,13 @@ export class PatentResolver {
       }).then((rows) => rows.map((row) => row.id));
       patentsToParse = patentsToParse.filter((pToParse) => !patentsExisting.includes(pToParse.id));
     }
+    // Добавление патентов в очередь на парсинг
     await this.prisma.$transaction(patentsToParse.map((p) => this.prisma.patentParseQueue.upsert({
       where: { url: p.url },
       create: { url: p.url },
       update: { url: p.url },
     })));
+    // Возвращаем количество добавленных патентов в очередь на парсинг
     return patentsToParse.length;
-  }
-
-  @Subscription(() => Int)
-  patentsCountChanged() {
-    return AppPubSub.asyncIterator(WsEvents.PatentsCountChanged);
   }
 }

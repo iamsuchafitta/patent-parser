@@ -1,8 +1,6 @@
-export enum EngineEnum {
-  Nightmare = 'Nightmare',
-  Puppeteer = 'Puppeteer',
-}
-
+/**
+ * HTML селекторы для парсинга страницы патента с Google Patents
+ */
 export const GooglePatentSelectors = {
   PubNum: 'h2#pubnum',
   PubNumFromUrl: /\/patent\/([A-Z]{2}\d+[A-Z]\d*)(\/|$)/,

@@ -12,8 +12,8 @@ RUN npm prune --production
 FROM node:20-alpine AS prod
 WORKDIR /app
 RUN apk add --no-cache \
-      chromium
-RUN apk add --no-cache nss freetype freetype-dev harfbuzz ca-certificates ttf-freefont
+      chromium \
+      nss freetype freetype-dev harfbuzz ca-certificates ttf-freefont
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
