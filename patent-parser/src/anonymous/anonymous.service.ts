@@ -53,8 +53,8 @@ export class AnonymousService {
     const browser = await this.startPuppeteer();
     const [page] = await browser.pages();
     try {
-      await page.goto(options.url);
-      await page.waitForSelector(options.waitSelector, { timeout: ms('20s') });
+      await page.goto(options.url, { timeout: ms('60s') });
+      await page.waitForSelector(options.waitSelector, { timeout: ms('60s') });
       if (options.evaluate) await page.evaluate(options.evaluate);
       return await page.evaluate(evaluateReturn);
     } catch (e) {
