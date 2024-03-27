@@ -21,10 +21,12 @@
     "svc:dev:up": "docker compose -f dev-utils/docker-compose.dev-svc.yml up -d --force-recreate -t 1",
     "svc:dev:down": "docker compose -f dev-utils/docker-compose.dev-svc.yml down",
     "db:dev:backup": "docker exec -i patent-parser-db-dev sh /opt/backups/@backup.sh",
-    "db:dev:restore": "docker exec -i patent-parser-db-dev sh /opt/backups/@restore.sh"
+    "db:dev:restore": "docker exec -i patent-parser-db-dev sh /opt/backups/@restore.sh",
+    "ch:migrate": "dotenv -c -- tsx migrations-clickhouse.ts"
   },
   "dependencies": {
     "@apollo/server": "^4.10.1",
+    "@clickhouse/client": "^0.3.0",
     "@nestjs/apollo": "^12.1.0",
     "@nestjs/common": "^10.3.3",
     "@nestjs/core": "^10.3.3",
@@ -35,6 +37,7 @@
     "@prisma/client": "5.10.2",
     "axios": "^1.6.7",
     "class-transformer": "^0.5.1",
+    "csv-stringify": "^6.4.6",
     "graphql": "^16.8.1",
     "graphql-scalars": "^1.22.5",
     "graphql-subscriptions": "^2.0.0",

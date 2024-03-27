@@ -1,12 +1,14 @@
 import { Args, Int, Mutation, Resolver } from '@nestjs/graphql';
-import { PrismaService } from '../../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
 import { InternalServerErrorException, Logger } from '@nestjs/common';
-import {GraphQLPositiveInt, GraphQLURL} from 'graphql-scalars';
+import { GraphQLPositiveInt, GraphQLURL } from 'graphql-scalars';
 import ms from 'ms';
 import Papa from 'papaparse';
-import { AnonymousService } from '../../anonymous/anonymous.service';
+import { AnonymousService } from '../anonymous/anonymous.service';
 import { AxiosError } from 'axios';
+import { PatentStore } from '../store/patent-store/patent.store';
+import { QueueStore } from '../store/queue-store/queue.store';
+import { QueueElementTypeEnum } from '@prisma/client';
+import { QueueElementTypeEnum1 } from '../store/queue-store/queue-store.types';
 
 /**
  * Запросы к приложению на парсинг патентов
@@ -16,33 +18,31 @@ export class PatentResolver {
   private readonly logger = new Logger(PatentResolver.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly patentStore: PatentStore,
+    private readonly queueStore: QueueStore,
     private readonly anonymous: AnonymousService,
   ) {}
 
   /**
    * Добавление патента в очередь на парсинг с приоритетом
    * @param patentUrl - URL патента
+   * @param type - Тип задачи парсинга
    */
   @Mutation(() => String, { description: 'Parse patent' })
   public async patentParse(
     @Args('patentUrl', { type: () => GraphQLURL }) patentUrl: string,
+    @Args('type', { type: () => QueueElementTypeEnum1 }) type: QueueElementTypeEnum,
   ) {
     // Getting the nearest patent in the parsing queue
-    const nextPatentToParse = await this.prisma.patentParseQueue.findFirst({
-      orderBy: { createdAt: 'asc' },
-    }).then((first) => first?.createdAt);
+    const nextPatentToParse = await this.queueStore.queueNearestElement()
+      .then((first) => first?.createdAt);
     // Adding to the queue before the next
-    const data: Prisma.PatentParseQueueCreateInput = {
+    await this.queueStore.queueCreateMany([{
       url: patentUrl,
+      type,
       createdAt: nextPatentToParse ? new Date(nextPatentToParse!.getTime() - ms('1h')) : undefined,
       startedAt: null,
-    };
-    await this.prisma.patentParseQueue.upsert({
-      where: { url: patentUrl },
-      create: data,
-      update: data,
-    });
+    }]);
     return 'Added to the queue with priority';
   }
 
@@ -58,7 +58,7 @@ export class PatentResolver {
     @Args('search') search: string,
     @Args('isOrganisation', { defaultValue: false }) isOrganisation: boolean,
     @Args('isIgnoreExisting', { defaultValue: true }) ignoreExisting: boolean = true,
-    @Args('limit', { nullable: true, type: ()=> GraphQLPositiveInt }) limit?: number | null,
+    @Args('limit', { nullable: true, type: () => GraphQLPositiveInt }) limit?: number | null,
   ): Promise<number> {
     // Запрос на поиск патентов по организации или по запросу
     const param = isOrganisation ? 'assignee' : 'q';
@@ -79,26 +79,17 @@ export class PatentResolver {
     // Парсинг CSV, извлечение id и url патентов
     const csvParsed = Papa.parse(csvString, { header: false, skipEmptyLines: true });
     let patentsToParse = csvParsed.data
-        .slice(2, limit ? limit + 2 : undefined)
-        .map((row: string) => ({ id: row[0], url: row[8] }));
+      .slice(2, limit ? limit + 2 : undefined)
+      .map((row: string) => ({ id: row[0], url: row[8] }));
     // Если нужно игнорировать существующие патенты, то убираем их из полученного списка
     if (ignoreExisting) {
-      const patentsExisting = await this.prisma.patent.findMany({
-        where: { id: { in: patentsToParse.map((p) => p.id) } },
-        select: { id: true, urlGoogle: true },
-      }).then((rows) => new Set(rows.map((row) => row.id)));
-      patentsToParse = patentsToParse.filter((pToParse) => !patentsExisting.has(pToParse.id));
+      const patentsExistingIds = await this.patentStore.patentIdsExisting(patentsToParse.map((p) => p.id));
+      patentsToParse = patentsToParse.filter((pToParse) => !patentsExistingIds.has(pToParse.id));
     }
-    const alreadyInQueue = await this.prisma.patentParseQueue.findMany({
-      where: { url: { in: patentsToParse.map((p) => p.url) } },
-      select: { url: true },
-    }).then((rows) => new Set(rows.map((row) => row.url)));
-    patentsToParse = patentsToParse.filter((pToParse) => !alreadyInQueue.has(pToParse.url));
     // Добавление патентов в очередь на парсинг
-    await this.prisma.$transaction(patentsToParse.map((p) => this.prisma.patentParseQueue.upsert({
-      where: { url: p.url },
-      create: { url: p.url },
-      update: { url: p.url },
+    await this.queueStore.queueCreateMany(patentsToParse.map((p) => ({
+      url: p.url,
+      type: QueueElementTypeEnum.GooglePatent,
     })));
     // Возвращаем количество добавленных патентов в очередь на парсинг
     return patentsToParse.length;

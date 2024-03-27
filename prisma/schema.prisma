@@ -1,0 +1,55 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [uuidOssp(map: "uuid-ossp")]
+}
+
+/// Патент
+model Patent {
+  /// Номер патента
+  id                String  @id
+  /// Ссылка на патент в Google Patents
+  urlGoogle         String?
+  /// Ссылка на патент в Yandex Patents
+  urlYandex         String?
+  /// Название патента
+  title             String?
+  /// Краткое описание
+  abstract          String?
+  /// Полное описание
+  description       String?
+  /// Области технологий, классификации по патентным системам (например, IPC или CPC)
+  classifications   Json?
+  /// Пункты формулы изобретения
+  claims            Json?
+  /// Концепты
+  concepts          Json?
+  /// Связи с другими патентами
+  relations         Json?
+  /// Список событий
+  applicationEvents Json?
+}
+
+enum QueueElementTypeEnum {
+  GooglePatent
+}
+
+model QueueElement {
+  /// Ссылка
+  url       String               @id
+  /// Тип элемента в очереди
+  type      QueueElementTypeEnum
+  /// Когда началась обработка (в случае истечения ожидания, можно начать снова)
+  startedAt DateTime?            @db.Timestamptz
+  /// Кол-во попыток обработки
+  tries     Int                  @default(0)
+
+  // Служебные поля
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz
+}

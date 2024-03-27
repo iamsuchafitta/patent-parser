@@ -20,6 +20,11 @@ namespace NodeJS {
 
     DATABASE_URL: string;
 
+    CH_URL: string;
+    CH_USERNAME: string;
+    CH_PASSWORD: string;
+    CH_DATABASE: string;
+
     // S3_ENDPOINT: string;
     // S3_PORT: string;
     // S3_IS_SSL?: string;
