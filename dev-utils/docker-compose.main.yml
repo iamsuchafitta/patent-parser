@@ -13,7 +13,6 @@ services:
     environment:
       PROXY_HOST: tor-privoxy
       DATABASE_URL: postgresql://dev:dev@database:5432/dev?schema=public
-      PARSER_ID: replica-0
     ports:
       - 5000:5000
 
@@ -29,7 +28,6 @@ services:
     environment:
       PROXY_HOST: tor-privoxy
       DATABASE_URL: postgresql://dev:dev@database:5432/dev?schema=public
-      PARSER_ID: replica-1
     ports:
       - 5001:5000
 
@@ -45,6 +43,5 @@ services:
     environment:
       PROXY_HOST: tor-privoxy
       DATABASE_URL: postgresql://dev:dev@database:5432/dev?schema=public
-      PARSER_ID: replica-2
     ports:
       - 5002:5000

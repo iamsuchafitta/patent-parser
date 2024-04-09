@@ -2,6 +2,7 @@
 /dev-utils/dev-data-database
 /dev-utils/dev-data-s3
 /dev-utils/temp
+.cache
 
 # compiled output
 /dist

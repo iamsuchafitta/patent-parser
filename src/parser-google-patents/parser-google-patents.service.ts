@@ -1,56 +1,81 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import { Injectable } from '@nestjs/common';
-import { AnonymousService } from '../anonymous/anonymous.service';
-import parse from 'node-html-parser';
-import { GooglePatentSelectors } from './parser-google-patents.constants';
-import { GooglePatentParser } from './GooglePatentParser';
-import { PatentStore } from '../store/patent-store/patent.store';
-import type { QueueElement } from '../store/queue-store/queue-store.types';
+import { setTimeout } from 'node:timers/promises';
+import { Injectable, Logger } from '@nestjs/common';
+import ms from 'ms';
+import pRetry from 'p-retry';
+import { AnonymousService } from '../anonymous/anonymous.service.js';
+import { GooglePatentParser } from '../common/models/google-patent-parser.js';
+import { pShouldRetry } from '../common/p-should-retry.js';
+import { PatentStore } from '../store/patent-store/patent.store.js';
+import type { QueueElement } from '../store/queue-store/queue.types.js';
 
 /**
- * Сервис парсинга патентов.
- * Обрабатывает очередь парсинга патентов с Google Patents.
+ * Сервис парсинга Google патентов.
  * Парсит страницы патентов и сохраняет данные в БД.
  */
 @Injectable()
 export class ParserGooglePatentsService {
+  private readonly logger = new Logger(ParserGooglePatentsService.name);
 
   constructor(
     private readonly anonymous: AnonymousService,
     private readonly patentStore: PatentStore,
-  ) {}
+  ) {
+    this.parse = this.parse.bind(this);
+  }
 
   /**
-   * Метод парсинга патента с Google Patents
+   * Метод парсинга патента с Google Patents.
    * Делает запрос по url, парсит страницу и сохраняет данные в БД.
    * @param elem Элемент очереди парсинга.
    * @returns void - Ничего не возвращает.
    */
-  public async parseGooglePatent(elem: QueueElement) {
-    // Функция выполняемая в браузере для клика по кнопке "Раскрыть классификации"
-    const startCallback = () => {
-      const moreClassifications = document.querySelector('classification-viewer.patent-result div.more:not([hidden])');
-      if (moreClassifications) { // @ts-ignore
-        moreClassifications.click();
+  public async parse(elem: QueueElement) {
+    const time = Date.now() / 1000;
+    const retries = 2;
+    // Request
+    const result = await pRetry(async (attempt) => {
+      this.logger.log(`[${elem.url}] attempt=${attempt}/${retries + 1}...`);
+      const { browser, page } = await this.anonymous.startPuppeteer({ blockCSS: true, blockImg: true });
+      try {
+        // Intercept csv concepts file
+        let conceptsCSVStr: string | undefined;
+        await page.exposeFunction('conceptsResolve', (result: string) => void (conceptsCSVStr = result));
+        await page.evaluateOnNewDocument(() => {
+          URL.createObjectURL = (blob: Blob): any => {
+            const reader = new FileReader();
+            reader.onload = () => (window as any).conceptsResolve(reader.result);
+            reader.readAsText(blob);
+            return undefined; // Broke function to prevent file download
+          };
+        });
+        // Open page
+        await page.goto(elem.url, { waitUntil: 'load', timeout: ms('60s') });
+        await page.$('classification-viewer.patent-result div.more:not([hidden])')
+          .then((moreClassificationsBtn) => moreClassificationsBtn?.click());
+        // Click on "show more concepts" button
+        await page.$('[id=concepts]+div a.patent-result[href]')
+          .then((conceptsBtn) => conceptsBtn?.click());
+        await setTimeout(1000);
+        return { html: await page.content(), conceptsCSVStr };
+      } finally {
+        await browser.close();
       }
-    };
-    // Выполнение запроса и получение HTML разметки страницы
-    const root = parse(await this.anonymous.getHtml({
+    }, {
+      retries,
+      shouldRetry: pShouldRetry(),
+      onFailedAttempt: (err) => this.logger.warn(`[${elem.url}] attempt=${err.attemptNumber}/${retries + 1} failed: ${err.message}`),
+    });
+    // Parse
+    const patent = await GooglePatentParser.parse({
+      ...result,
       url: elem.url,
-      waitSelector: GooglePatentSelectors.Title,
-      evaluate: startCallback,
-    }));
-    const parser = new GooglePatentParser(elem.url, root);
+    });
     // Save
     await this.patentStore.patentUpsert({
-      id: parser.id,
+      ...patent,
       urlGoogle: elem.url,
-      title: parser.title,
-      abstract: parser.abstract,
-      description: parser.description,
-      claims: parser.claims,
-      classifications: parser.classifications,
-      relations: parser.relations,
     });
+    this.logger.log(`[${elem.url}] Done in ${(Date.now() / 1000 - time).toFixed(2)}sec!`);
   }
 }

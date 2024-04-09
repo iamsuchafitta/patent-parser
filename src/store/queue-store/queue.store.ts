@@ -1,20 +1,27 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { PROCESSING_TIMEOUT } from '../../app.constants';
-import { merge } from 'lodash';
-import type { QueueElementCreateInput, QueueElement } from './queue-store.types';
+import { merge } from 'lodash-es';
+import { type QueueElementCreateInput, type QueueElement, QueueElementTypeEnum } from './queue.types.js';
+import { PROCESSING_TIMEOUT } from '../../app.constants.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
 
 @Injectable()
 export class QueueStore {
   constructor(private readonly prisma: PrismaService) {}
 
-  async queueCreateMany(elements: QueueElementCreateInput[]): Promise<void> {
-    const existing = await this.prisma.queueElement.findMany({
-      where: { url: { in: elements.map((elem) => elem.url) } },
-    }).then((rows) => new Set(rows.map((row) => row.url)))
-    await this.prisma.queueElement.createMany({
-      data: elements.filter((elem) => !existing.has(elem.url)),
-    });
+  async queueCreateMany(
+    elements: QueueElementCreateInput[],
+    { ignoreExisting = true }: { ignoreExisting?: boolean } = {},
+  ): Promise<number> {
+    if (ignoreExisting) {
+      const existing = await this.prisma.queueElement.findMany({
+        where: { url: { in: elements.map(({ url }) => url) } },
+      }).then((rows) => new Set(rows.map(({ url }) => url)));
+      elements = elements.filter((elem) => !existing.has(elem.url));
+    } else {
+      await this.prisma.queueElement.deleteMany({ where: { url: { in: elements.map(({ url }) => url) } } });
+    }
+    await this.prisma.queueElement.createMany({ data: elements });
+    return elements.length;
   }
 
   async queueNearestElement(): Promise<QueueElement | null> {
@@ -23,19 +30,59 @@ export class QueueStore {
     });
   }
 
-  async queueGetElements(count: number): Promise<QueueElement[]> {
-    return this.prisma.$transaction(async tr => {
-      // Извлекаем необходимо кол-во элементов и блокируем их в БД.
-      // Игнорируем элементы, которые уже обрабатываются больше чем PROCESSING_TIMEOUT.
+  /**
+   * Захват элементов из очереди.
+   * Метод безопасен при запуске приложения в несколько реплик
+   *    за счёт использования транзакции с пессимистичной блокировкой.
+   */
+  async queueElementsGrab(
+    args: {
+      // Total of the maximum number of elements to be retrieved:
+      totalMaxCount: number;
+      // Maximum number of elements of each type:
+    } & Record<QueueElementTypeEnum, number>,
+  ): Promise<QueueElement[]> {
+    return this.prisma.$transaction(async (tr) => {
+      const timeout = PROCESSING_TIMEOUT.getDate();
       const elements = await tr.$queryRaw<QueueElement[]>`
-          SELECT *
-          FROM "QueueElement"
-          WHERE "startedAt" IS NULL
-             OR "startedAt" <= ${PROCESSING_TIMEOUT.getDate()}::TIMESTAMPTZ
-          ORDER BY "createdAt"
-          LIMIT ${count} FOR UPDATE SKIP LOCKED;
+        WITH
+          "GooglePatentElements" AS (
+            SELECT * FROM "QueueElement"
+            WHERE "type" = ${QueueElementTypeEnum.GooglePatent}::"QueueElementTypeEnum"
+              AND ("startedAt" IS NULL OR "startedAt" <= ${timeout}::TIMESTAMPTZ)
+            ORDER BY "priority" DESC, "createdAt"
+            LIMIT ${Math.min((args[QueueElementTypeEnum.GooglePatent]), args.totalMaxCount)} FOR UPDATE SKIP LOCKED
+          ), "YandexPatentElements" AS (
+            SELECT * FROM "QueueElement"
+            WHERE "type" = ${QueueElementTypeEnum.YandexPatent}::"QueueElementTypeEnum"
+              AND ("startedAt" IS NULL OR "startedAt" <= ${timeout}::TIMESTAMPTZ)
+            ORDER BY "priority" DESC, "createdAt"
+            LIMIT ${Math.min((args[QueueElementTypeEnum.YandexPatent]), args.totalMaxCount)} FOR UPDATE SKIP LOCKED
+          ), "ArticleRUElements" AS (
+            SELECT * FROM "QueueElement"
+            WHERE "type" = ${QueueElementTypeEnum.ArticleRU}::"QueueElementTypeEnum"
+              AND ("startedAt" IS NULL OR "startedAt" <= ${timeout}::TIMESTAMPTZ)
+            ORDER BY "priority" DESC, "createdAt"
+            LIMIT ${Math.min((args[QueueElementTypeEnum.ArticleRU]), args.totalMaxCount)} FOR UPDATE SKIP LOCKED
+          ), "ArticleENElements" AS (
+            SELECT * FROM "QueueElement"
+            WHERE "type" = ${QueueElementTypeEnum.ArticleEN}::"QueueElementTypeEnum"
+              AND ("startedAt" IS NULL OR "startedAt" <= ${timeout}::TIMESTAMPTZ)
+            ORDER BY "priority" DESC, "createdAt"
+            LIMIT ${Math.min((args[QueueElementTypeEnum.ArticleEN]), args.totalMaxCount)} FOR UPDATE SKIP LOCKED
+          )
+        SELECT * FROM (
+          SELECT * FROM "GooglePatentElements" UNION ALL
+          SELECT * FROM "YandexPatentElements" UNION ALL
+          SELECT * FROM "ArticleRUElements" UNION ALL
+          SELECT * FROM "ArticleENElements"
+        ) AS "combined"
+        ORDER BY 
+          "priority" DESC,
+          RANDOM() -- Равномерное распределение между множеством выборок
+        LIMIT ${(args.totalMaxCount)};
       `;
-      // Обновляем время начала обработки и кол-во попыток.
+
       for (const elem of elements) {
         merge(elem, await tr.queueElement.update({
           where: { url: elem.url },
@@ -45,11 +92,12 @@ export class QueueStore {
           },
         }));
       }
+
       return elements;
     });
   }
 
-  async queueElementParsed(url: string) {
+  async queueDelete(url: string) {
     await this.prisma.queueElement.delete({ where: { url } }).catch(() => null);
   }
 }

@@ -1,32 +1,14 @@
 /**
- * npm-check-updates обновляет зависимости package.json до последних версий.
- *
- * Использование "npx ncu" в консоли и выбрать пакеты для обновления.
- *
- * После каждого обновления обязательно проверять работоспособность приложения.
- *
- * Прежде чем добавлять пакет в исключения обновлений,
- *    нужно попытаться исправить ошибки, которые могут возникнуть после обновления.
- */
-
-/**
- * https://www.npmjs.com/package/npm-check-updates#options
- */
+ * npm-check-updates upgrades package.json dependencies to the latest versions, ignoring specified versions
+ * @documentation https://www.npmjs.com/package/npm-check-updates#options
+ **/
 module.exports = {
-  /**
-   * Перезапись package.json обновленными версиями вместо простого вывода в консоль.
-   */
+  /** Overwrite package file with upgraded versions instead of just outputting to console */
   upgrade: true,
-  /**
-   * Выбор пакетов для обновления в интерактивном режиме.
-   */
+  /** Interactive prompts for each dependency */
   interactive: true,
-  /**
-   * Группировать обновления по Major, Minor и Patch версиям.
-   */
+  /** Groups packages by major, minor, patch, and major version zero updates */
   format: 'group',
-  /**
-   * Игнорировать обновления определенных пакетов.
-   */
+  /** Exclude packages matching the given string, wildcard, glob, comma-or-space-delimited list, /regex/, or predicate function */
   reject: [],
 };

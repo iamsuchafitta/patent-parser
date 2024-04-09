@@ -1,5 +1,5 @@
-import process from 'node:process';
 import event from 'node:events';
+import process from 'node:process';
 
 export async function appMonitor() {
   const memoryUsage = process.memoryUsage();

@@ -5,14 +5,17 @@
  * Global environment variables of process.env.*
  */
 namespace NodeJS {
-  import { EnvModeEnum } from './config/env-mode.enum';
+  import type { EnvModeEnum } from './config/env-mode.enum';
 
   type ProcessEnv = {
     ENV_MODE: EnvModeEnum;
-    PARSER_ID: string;
     PORT: string;
 
-    CONCURRENT_REQUESTS: string;
+    CONCURRENT_SUMMARY_LIMIT: string;
+    CONCURRENT_PATENTS_GOOGLE: string;
+    CONCURRENT_PATENTS_YANDEX: string;
+    CONCURRENT_ARTICLE_IOFFE_RU: string;
+    CONCURRENT_ARTICLE_RAJPUB_EN: string;
 
     PROXY_HOST: string;
     PROXY_CONTROL_PORT: string;

@@ -1,8 +1,13 @@
-# Парсер патентов
+# Парсер патентов и журнальных статей
 
 ## Описание
 
-Приложение парсит патенты с [https://patents.google.com](https://patents.google.com/)
+Приложение для сбора информации о патентах и публикациях с ресурсов:
+
+- [Google Patents](https://patents.google.com/) - Патенты со всего мира
+- [Yandex Patents](https://yandex.ru/patents) - Патенты РФ И СССР
+- [Журнальный портал ФТИ им. А.Ф. Иоффе](https://journals.ioffe.ru) - Русскоязычные статьи
+- [JOURNAL OF ADVANCES IN PHYSICS](https://rajpub.com/index.php/jap/index) - Англоязычные статьи
 
 ## Эффективность и отказоустойчивость
 
@@ -32,3 +37,17 @@
   * [Prisma](https://www.prisma.io) - ORM для NodeJS.
   * [Puppeteer](https://pptr.dev) - автоматизации Chrome/Chromium для взаимодействия с веб-сайтами.
   * [Axios](https://www.npmjs.com/package/axios) - HTTP-клиент.
+
+## Разработка
+
+```bash
+# Установка зависимостей
+npm install
+npx puppeteer browsers install chrome
+# Запуск БД и необходимых сервисов
+npm run svc:dev:up
+# Создание схемы БД
+npx prisma db push
+# Запуск приложения в режиме разработки
+npm run start:swc
+```

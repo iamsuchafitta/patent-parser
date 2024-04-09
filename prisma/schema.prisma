@@ -12,31 +12,81 @@ datasource db {
 /// Патент
 model Patent {
   /// Номер патента
-  id                String  @id
-  /// Ссылка на патент в Google Patents
-  urlGoogle         String?
-  /// Ссылка на патент в Yandex Patents
-  urlYandex         String?
+  id                   String  @id
   /// Название патента
-  title             String?
+  title                String?
+  /// Правообладатель
+  assignee             String?
+  /// Изобретатель или Автор
+  inventorOrAuthor     String?
+  /// Дата приоритета
+  priorityDate         String? // YYYY-MM-DD
+  /// Дата подачи заявки или создания
+  filingOrCreationDate String? // YYYY-MM-DD
+  /// Дата публикации
+  publicationDate      String? // YYYY-MM-DD
+  /// Дата выдачи патента
+  grantDate            String? // YYYY-MM-DD
   /// Краткое описание
-  abstract          String?
+  abstract             String?
   /// Полное описание
-  description       String?
+  description          String?
   /// Области технологий, классификации по патентным системам (например, IPC или CPC)
-  classifications   Json?
+  classifications      Json?
   /// Пункты формулы изобретения
-  claims            Json?
+  claims               Json?
   /// Концепты
-  concepts          Json?
+  concepts             Json?
   /// Связи с другими патентами
-  relations         Json?
+  relations            Json?
   /// Список событий
-  applicationEvents Json?
+  applicationEvents    Json?
+
+  /// Ссылка на патент в Google Patents
+  urlGoogle String? @unique
+  /// Ссылка на патент в Yandex Patents
+  urlYandex String? @unique
+
+  // Служебные поля
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz
+}
+
+model Article {
+  url           String  @id
+  title         String?
+  journalName   String?
+  authors       Json?
+  organizations Json?
+  date          String? // YYYY-MM-DD
+  abstract      String?
+  pdfUrl        String?
+
+  // Служебные поля
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz
+}
+
+/// Временная таблица Патента с извл. данными при поиске перед парсингом
+model PatentTemp {
+  id                   String  @id
+  title                String?
+  assignee             String?
+  inventorOrAuthor     String?
+  priorityDate         String? // YYYY-MM-DD
+  filingOrCreationDate String? // YYYY-MM-DD
+  publicationDate      String? // YYYY-MM-DD
+  grantDate            String? // YYYY-MM-DD
+
+  urlGoogle String? @unique
+  urlYandex String? @unique
 }
 
 enum QueueElementTypeEnum {
   GooglePatent
+  YandexPatent
+  ArticleRU
+  ArticleEN
 }
 
 model QueueElement {
@@ -48,6 +98,8 @@ model QueueElement {
   startedAt DateTime?            @db.Timestamptz
   /// Кол-во попыток обработки
   tries     Int                  @default(0)
+  /// Приоритет
+  priority  Int                  @default(0)
 
   // Служебные поля
   createdAt DateTime @default(now()) @db.Timestamptz

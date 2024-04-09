@@ -3,16 +3,7 @@
   "sourceRoot": "src",
   "compilerOptions": {
     "deleteOutDir": true,
-    "tsConfigPath": "tsconfig.build.json",
-    "plugins": [
-      {
-        "name": "@nestjs/graphql",
-        "options": {
-          "introspectComments": true,
-          "typeFileNameSuffix": [".input.ts", ".args.ts", ".entity.ts", ".model.ts", ".object.ts"]
-        }
-      }
-    ]
+    "tsConfigPath": "tsconfig.build.json"
   },
   "generateOptions": {
     "spec": false

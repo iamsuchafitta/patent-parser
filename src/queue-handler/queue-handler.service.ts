@@ -1,29 +1,41 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { ParserGooglePatentsService } from '../parser-google-patents/parser-google-patents.service';
 import { Interval } from '@nestjs/schedule';
+import { QueueElementTypeEnum } from '@prisma/client';
+import { Mutex } from 'async-mutex';
+import { shallowEqual } from 'fast-equals';
+import { values, sum, fromPairs, keys, flow, throttle } from 'lodash-es';
 import ms from 'ms';
-import { AppConfig } from '../common/app-config';
-import { QueueStore } from '../store/queue-store/queue.store';
+import { AppConfig } from '../common/app-config.js';
+import { ArticleIoffeService } from '../parser-articles/article-ioffe.service.js';
+import { ArticleRajpubService } from '../parser-articles/article-rajpub.service.js';
+import { ParserGooglePatentsService } from '../parser-google-patents/parser-google-patents.service.js';
+import { QueueStore } from '../store/queue-store/queue.store.js';
+import type { QueueElement } from '../store/queue-store/queue.types.js';
 
 @Injectable()
 export class QueueHandlerService implements OnModuleInit {
   private readonly logger = new Logger(QueueHandlerService.name);
-  /**
-   * Счетчик текущих обрабатываемых запросов.
-   */
-  public currentProcessing: number = 0;
+
+  /** Счетчик текущих обрабатываемых запросов */
+  public currentProcessing = fromPairs(keys(QueueElementTypeEnum).map(key => [key, 0])) as Record<QueueElementTypeEnum, number>;
+
+  /** Mutex для атомарного захвата новых элементов очереди и увеличения счётчика */
+  private mutex = new Mutex();
 
   constructor(
-    private readonly parser: ParserGooglePatentsService,
+    private readonly googlePatents: ParserGooglePatentsService,
+    private readonly articleIoffe: ArticleIoffeService,
+    private readonly articleRajpub: ArticleRajpubService,
     private readonly queueStore: QueueStore,
-  ) {}
+  ) {
+    // this.logProcessing = throttle(this.logProcessing.bind(this), ms('5s'), { trailing: true });
+    this.processQueue = throttle(this.processQueue.bind(this), 500, { leading: false, trailing: true }) as typeof this.processQueue;
+  }
 
-  /**
-   * Метод инициализации сервиса.
-   */
+  /** Метод инициализации сервиса */
   async onModuleInit() {
     // Мгновенно запускаем обработку очереди парсинга, чтобы не ждать 5 секунд.
-    this.processQueue().then();
+    this.processQueue()?.then();
   }
 
   /**
@@ -33,31 +45,75 @@ export class QueueHandlerService implements OnModuleInit {
    */
   @Interval(ms('5s'))
   async processQueue() {
-    // Получаем количество элементов очереди, которые можем обработать.
-    // Если количество обрабатываемых запросов превышает лимит, то ничего делать не нужно.
-    const needQueueElements = AppConfig.concurrentRequests - this.currentProcessing;
-    if (needQueueElements <= 0) return;
-    // Получение элементов очереди парсинга.
-    const queueElements = await this.queueStore.queueGetElements(needQueueElements);
-    // Увеличиваем счетчик текущих обрабатываемых запросов.
-    this.currentProcessing += queueElements.length;
-    // По каждому полученному элементу очереди начинаем парсинг.
-    for (const qElement of queueElements) {
-      this.logger.log(`Processing... ${qElement.url}`);
-      // parseGooglePatent - асинхронный метод, но здесь мы не ждём конца его выполнения.
-      this.parser.parseGooglePatent(qElement).then(async () => {
-        this.logger.log(`DONE! ${qElement.url}`);
-        // При успешном завершении удаляем элемент из очереди.
-        await this.queueStore.queueElementParsed(qElement.url).catch(() => null);
-      }).catch(async (err) => {
-        this.logger.error(`Error processing ${qElement.url}, ${err.message}`);
-      }).finally(() => {
-        // В finally, независимо от успеха или ошибки: уменьшаем счетчик текущих обрабатываемых запросов.
-        --this.currentProcessing;
-        this.processQueue().then();
+    // Mutex необходим для атомарного контроля над счётчиком и запросом к БД.
+    // Пример при запуске более 1 processQueue() без Mutex:
+    //    Обрабатывается 10 элементов из максимума в 20.
+    //    processQueue_1 запросил от бд 10 шт. и ждёт ответа;
+    //    processQueue_2 запросил тоже 10 и ждёт ответа;
+    //    processQueue_1 получил ответ и увеличил счётчик на 10, тогда сейчас 20/20;
+    //    processQueue_2 получил ответ и увеличил счётчик ещё на 10, итого: 30/20!
+    const queueElements = await this.mutex.runExclusive(async () => {
+      // Проверяем, сколько элементов нам нужно взять из очереди.
+      const needQueueElements = AppConfig.concurrent.summaryLimit - this.currentProcessingSum;
+      // Если нечего брать, выходим.
+      if (needQueueElements <= 0) return [];
+      // Запрашиваем из БД элементы очереди.
+      const queueElements = await this.queueStore.queueElementsGrab({
+        totalMaxCount: needQueueElements,
+        ...this.freeSlots,
       });
-      // Во избежание перегрузки делаем паузу в 1 секунду перед обработкой следующего элемента.
-      await new Promise((resolve) => setTimeout(resolve, ms('1s')));
+      // Увеличиваем счётчики обрабатываемых запросов.
+      queueElements.forEach((element) => ++this.currentProcessing[element.type]);
+      // Возвращаем полученные элементы очереди, освобождая Mutex.
+      return queueElements;
+    });
+    if (this.currentProcessingSum > AppConfig.concurrent.summaryLimit) {
+      this.logger.error(`CONCURRENCY OVERFLOW: current=${this.currentProcessingSum} > config=${AppConfig.concurrent.summaryLimit}`);
     }
+    this.logProcessing();
+    // По каждому полученному элементу очереди начинаем парсинг.
+    queueElements.forEach((qElement) => this.startProcessing(qElement).then(async () => {
+      // При успешном завершении удаляем элемент из очереди.
+      await this.queueStore.queueDelete(qElement.url);
+    }).catch(async (err: Error) => {
+      this.logger.error(`[${qElement.url}] Error: ${err.message}`, err.stack);
+    }).finally(() => {
+      // В finally, независимо от успеха или ошибки: уменьшаем счетчик текущих обрабатываемых запросов.
+      --this.currentProcessing[qElement.type];
+      this.processQueue()?.then();
+    }));
+  }
+
+  private get currentProcessingSum(): number {
+    return sum(values(this.currentProcessing));
+  }
+
+  private startProcessing(qElement: QueueElement) {
+    switch (qElement.type) {
+      case QueueElementTypeEnum.GooglePatent:
+        return this.googlePatents.parse(qElement);
+      case QueueElementTypeEnum.ArticleRU:
+        return this.articleIoffe.parse(qElement);
+      case QueueElementTypeEnum.ArticleEN:
+        return this.articleRajpub.parse(qElement);
+      default:
+        return Promise.reject(new Error(`Unimplemented type ${qElement.type}`));
+    }
+  }
+
+  private get freeSlots() {
+    return flow(
+      () => keys(this.currentProcessing) as QueueElementTypeEnum[],
+      (types) => types.map((type) => [type, AppConfig.concurrent[type] - this.currentProcessing[type]]),
+      (pairs) => fromPairs(pairs) as Record<QueueElementTypeEnum, number>,
+    )();
+  }
+
+  private logProcessingMemory: typeof this.currentProcessing | null = null;
+
+  private logProcessing() {
+    if (shallowEqual(this.currentProcessing, this.logProcessingMemory)) return;
+    this.logProcessingMemory = { ...this.currentProcessing };
+    this.logger.log(`processing=${JSON.stringify(this.currentProcessing)}, sum=${this.currentProcessingSum}`);
   }
 }

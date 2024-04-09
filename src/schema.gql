@@ -4,14 +4,416 @@
 
 type Query {
   healthz(db: Boolean): String!
+  testParseArticleEN(url: String!): JSON!
 }
 
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON @specifiedBy(url: "http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf")
+
 type Mutation {
+  """Добавление RU статей в очередь на парсинг с сайта journals.ioffe.ru"""
+  enqueueArticlesRU(
+    journalIds: [IoffeJournalsOfArticlesEnum!]! = [SolidBodyPhysics, PhysicsAndSemiconductorsTechnique, TechnicalPhysics, LettersToTechnicalPhysics, OpticsAndSpectroscopy]
+
+    """С года"""
+    yearFrom: PositiveInt
+
+    """До года (включительно)"""
+    yearTo: PositiveInt
+    limit: PositiveInt
+  ): JSON!
+
+  """Добавление EN статей в очередь на парсинг с сайта rajpub.com"""
+  enqueueArticlesEN(
+    journalIds: [RajpubJournalsOfArticlesEnum!]! = [InternationalJournalOfComputersAndTechnology, JournalOfAdvancesInLinguistics, JournalOfAdvancesInMathematics, JournalOfAdvancesInAgriculture, JournalOfAdvancesInChemistry, JournalOfSocialScienceResearch, JournalOfAdvancesInPhysics, JournalOfAdvancesInBiotechnology, InternationalJournalOfManagementAndInformationTechnology, JournalOfAdvancesInBiology, InternationalJournalOfResearchInEducationMethodology, JournalOfAdvancesInNaturalSciences]
+
+    """С года"""
+    yearFrom: PositiveInt
+
+    """До года (включительно)"""
+    yearTo: PositiveInt
+    limit: PositiveInt
+  ): JSON!
+  enqueueYandexPatents(input: YandexSearchInput! = {orderBy: Newest, types: [Patent], countries: [RussianFederation, SovietUnion], dateIntervalType: PublicationDate, parserSettings: {perPage: 500, maxCount: 9007199254740991, pageFrom: 1, pageTo: 9007199254740991, concurrent: 3}}): JSON!
+  enqueueGooglePatents(input: GoogleSearchInput! = {dateIntervalType: Publication, languages: [Russian], status: Application, type: Patent}, settings: GoogleSearchSettingsInput! = {splitDateIntervalByDays: 21}): JSON!
+
   """Parse patent"""
   patentParse(patentUrl: URL!, type: QueueElementTypeEnum!): String!
 
   """Add patents to parse queue by search"""
-  patentsSearch(search: String!, isOrganisation: Boolean! = false, isIgnoreExisting: Boolean! = true, limit: PositiveInt): Int!
+  patentsSearch(search: String!, isOrganisation: Boolean! = false, isIgnoreExisting: Boolean! = true): Int!
+
+  """Add patents to parse queue by search"""
+  patentsOfYear(year: PositiveInt!, maxPerMonth: PositiveInt): JSON!
+}
+
+"""Journals of articles on journals.ioffe.ru"""
+enum IoffeJournalsOfArticlesEnum {
+  SolidBodyPhysics
+  PhysicsAndSemiconductorsTechnique
+  TechnicalPhysics
+  LettersToTechnicalPhysics
+  OpticsAndSpectroscopy
+}
+
+"""Integers that will have a value greater than 0."""
+scalar PositiveInt
+
+"""Journals of articles on rajpub.com"""
+enum RajpubJournalsOfArticlesEnum {
+  InternationalJournalOfComputersAndTechnology
+  JournalOfAdvancesInLinguistics
+  JournalOfAdvancesInMathematics
+  JournalOfAdvancesInAgriculture
+  JournalOfAdvancesInChemistry
+  JournalOfSocialScienceResearch
+  JournalOfAdvancesInPhysics
+  JournalOfAdvancesInBiotechnology
+  InternationalJournalOfManagementAndInformationTechnology
+  JournalOfAdvancesInBiology
+  InternationalJournalOfResearchInEducationMethodology
+  JournalOfAdvancesInNaturalSciences
+}
+
+input YandexSearchInput {
+  """Сначала идут"""
+  orderBy: YandexSearchOrderByEnum! = Newest
+
+  """Тип"""
+  types: [YandexSearchTypeEnum!]! = [Patent]
+
+  """Страна"""
+  countries: [YandexSearchCountryEnum!]! = [RussianFederation, SovietUnion]
+
+  """Заявка"""
+  applicationTitle: String
+
+  """Документ"""
+  documentTitle: String
+
+  """Поисковая строка"""
+  text: String
+
+  """Название"""
+  name: String
+
+  """Авторы"""
+  authors: String
+
+  """Патентообладатели"""
+  patentOwners: String
+
+  """Тип даты"""
+  dateIntervalType: YandexSearchDateTypeEnum! = PublicationDate
+
+  """YYYY.MM.DD"""
+  dateFrom: GQLDateDotted
+
+  """YYYY.MM.DD"""
+  dateTo: GQLDateDotted
+
+  """Настройки парсинга результатов"""
+  parserSettings: YandexSearchSettings! = {perPage: 500, maxCount: 9007199254740991, pageFrom: 1, pageTo: 9007199254740991, concurrent: 3}
+}
+
+enum YandexSearchOrderByEnum {
+  Relevant
+  Newest
+  Oldest
+}
+
+enum YandexSearchTypeEnum {
+  Application
+  Patent
+}
+
+enum YandexSearchCountryEnum {
+  RussianFederation
+  SovietUnion
+}
+
+enum YandexSearchDateTypeEnum {
+  ApplicationDate
+  PublicationDate
+  ApplicationPublicationDate
+  PatentFilingStartDate
+}
+
+"""
+Date in format "YYYY.MM.DD"
+"""
+scalar GQLDateDotted
+
+input YandexSearchSettings {
+  """
+  Пагинация при запросе страниц с результатами. Больше: меньше запросов - быстрее, но больше вероятность отказов
+  """
+  perPage: PositiveInt! = 500
+
+  """Усечь до кол-ва патентов"""
+  maxCount: PositiveInt! = 9007199254740991
+
+  """Начиная со страницы"""
+  pageFrom: NonNegativeInt! = 1
+
+  """Заканчивая страницей (включительно)"""
+  pageTo: PositiveInt! = 9007199254740991
+
+  """Кол-во параллельных запросов"""
+  concurrent: PositiveInt! = 3
+}
+
+"""Integers that will have a value of 0 or more."""
+scalar NonNegativeInt
+
+input GoogleSearchInput {
+  searchTerms: [String!]
+  dateIntervalType: GoogleSearchDateIntervalType! = Publication
+
+  """Дата с"""
+  dateFrom: Date!
+
+  """Дата до (включительно)"""
+  dateTo: Date!
+  inventors: [String!]
+  assignee: [String!]
+  countries: [GoogleSearchCountryEnum!]
+  languages: [GoogleSearchLanguageEnum!] = [Russian]
+  status: GoogleSearchStatusEnum = Application
+  type: GoogleSearchTypeEnum = Patent
+  litigation: GoogleSearchLitigationEnum
+}
+
+enum GoogleSearchDateIntervalType {
+  Priority
+  Filing
+  Publication
+}
+
+"""
+A date string, such as 2007-12-03, compliant with the `full-date` format outlined in section 5.6 of the RFC 3339 profile of the ISO 8601 standard for representation of dates and times using the Gregorian calendar.
+"""
+scalar Date
+
+enum GoogleSearchCountryEnum {
+  WO
+  US
+  EP
+  JP
+  KR
+  CN
+  AE
+  AG
+  AL
+  AM
+  AO
+  AP
+  AR
+  AT
+  AU
+  AW
+  AZ
+  BA
+  BB
+  BD
+  BE
+  BF
+  BG
+  BH
+  BJ
+  BN
+  BO
+  BR
+  BW
+  BX
+  BY
+  BZ
+  CA
+  CF
+  CG
+  CH
+  CI
+  CL
+  CM
+  CO
+  CR
+  CS
+  CU
+  CY
+  CZ
+  DD
+  DE
+  DJ
+  DK
+  DM
+  DO
+  DZ
+  EA
+  EC
+  EE
+  EG
+  EM
+  ES
+  FI
+  FR
+  GA
+  GB
+  GC
+  GD
+  GE
+  GH
+  GM
+  GN
+  GQ
+  GR
+  GT
+  GW
+  HK
+  HN
+  HR
+  HU
+  IB
+  ID
+  IE
+  IL
+  IN
+  IR
+  IS
+  IT
+  JO
+  KE
+  KG
+  KH
+  KM
+  KN
+  KP
+  KW
+  KZ
+  LA
+  LC
+  LI
+  LK
+  LR
+  LS
+  LT
+  LU
+  LV
+  LY
+  MA
+  MC
+  MD
+  ME
+  MG
+  MK
+  ML
+  MN
+  MO
+  MR
+  MT
+  MW
+  MX
+  MY
+  MZ
+  NA
+  NE
+  NG
+  NI
+  NL
+  NO
+  NZ
+  OA
+  OM
+  PA
+  PE
+  PG
+  PH
+  PL
+  PT
+  PY
+  QA
+  RO
+  RS
+  RU
+  RW
+  SA
+  SC
+  SD
+  SE
+  SG
+  SI
+  SK
+  SL
+  SM
+  SN
+  ST
+  SU
+  SV
+  SY
+  SZ
+  TD
+  TG
+  TH
+  TJ
+  TM
+  TN
+  TR
+  TT
+  TW
+  TZ
+  UA
+  UG
+  UY
+  UZ
+  VC
+  VE
+  VN
+  YU
+  ZA
+  ZM
+  ZW
+}
+
+enum GoogleSearchLanguageEnum {
+  English
+  German
+  Chinese
+  French
+  Spanish
+  Arabic
+  Japanese
+  Korean
+  Portuguese
+  Russian
+  Italian
+  Dutch
+  Swedish
+  Finnish
+  Norwegian
+  Danish
+}
+
+enum GoogleSearchStatusEnum {
+  Grant
+  Application
+}
+
+enum GoogleSearchTypeEnum {
+  Patent
+  Design
+}
+
+enum GoogleSearchLitigationEnum {
+  HasRelatedLitigation
+  NoKnownLitigation
+}
+
+input GoogleSearchSettingsInput {
+  """
+  Результат поиска делится на временные маленькие интервалы, так как Google урезает результаты на больших интервалах
+  """
+  splitDateIntervalByDays: PositiveInt = 21
 }
 
 """
@@ -23,6 +425,3 @@ scalar URL
 enum QueueElementTypeEnum {
   GooglePatent
 }
-
-"""Integers that will have a value greater than 0."""
-scalar PositiveInt

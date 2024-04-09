@@ -1,8 +1,8 @@
-import { createClient } from '@clickhouse/client';
-import type { ClickHouseClient } from '@clickhouse/client-common/dist/client';
 import process from 'node:process';
 import type Stream from 'node:stream';
-import { joi } from './src/common/joi-configured';
+import { createClient } from '@clickhouse/client';
+import type { ClickHouseClient } from '@clickhouse/client-common/dist/client.js';
+import { joi } from './src/common/joi-configured.js';
 
 let client: ClickHouseClient<Stream.Readable>;
 let migrationsManager: MigrationManager;
@@ -141,7 +141,7 @@ CREATE OR REPLACE TABLE application_events
 (
     id String,
     date DateTime,
-    asignee String,
+    assignee String,
     inventors Array(String) -- Массив строк для хранения inventors
 ) ENGINE = MergeTree()
 ORDER BY date;
