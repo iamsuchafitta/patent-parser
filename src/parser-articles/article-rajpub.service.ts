@@ -3,7 +3,7 @@ import pRetry from 'p-retry';
 import { AnonymousService } from '../anonymous/anonymous.service.js';
 import { ArticleRajpubParser } from '../common/models/article-rajpub-parser.js';
 import { pShouldRetry } from '../common/p-should-retry.js';
-import { ArticleStore } from '../store/article.store/article.store.js';
+import { ArticleStore } from '../store/article-store/article.store.js';
 import type { QueueElement } from '../store/queue-store/queue.types.js';
 
 @Injectable()

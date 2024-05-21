@@ -1,6 +1,6 @@
 import { uniq } from 'lodash-es';
 import { parse as parseHtml, type HTMLElement } from 'node-html-parser';
-import type { Article, ArticleParsed } from '../../store/article.store/article.types.js';
+import type { Article, ArticleParsed } from '../../store/article-store/article.types.js';
 
 export class ArticleRajpubParser implements ArticleParsed {
   private readonly select = {

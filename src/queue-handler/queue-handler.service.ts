@@ -9,6 +9,7 @@ import { AppConfig } from '../common/app-config.js';
 import { ArticleIoffeService } from '../parser-articles/article-ioffe.service.js';
 import { ArticleRajpubService } from '../parser-articles/article-rajpub.service.js';
 import { ParserGooglePatentsService } from '../parser-google-patents/parser-google-patents.service.js';
+import { ParserYandexPatentsService } from '../parser-yandex-patents/parser-yandex-patents.service.js';
 import { QueueStore } from '../store/queue-store/queue.store.js';
 import type { QueueElement } from '../store/queue-store/queue.types.js';
 
@@ -24,12 +25,14 @@ export class QueueHandlerService implements OnModuleInit {
 
   constructor(
     private readonly googlePatents: ParserGooglePatentsService,
+    private readonly yandexPatents: ParserYandexPatentsService,
     private readonly articleIoffe: ArticleIoffeService,
     private readonly articleRajpub: ArticleRajpubService,
     private readonly queueStore: QueueStore,
   ) {
     // this.logProcessing = throttle(this.logProcessing.bind(this), ms('5s'), { trailing: true });
     this.processQueue = throttle(this.processQueue.bind(this), 500, { leading: false, trailing: true }) as typeof this.processQueue;
+    setInterval(this.processQueue, ms('5s'));
   }
 
   /** Метод инициализации сервиса */
@@ -92,12 +95,14 @@ export class QueueHandlerService implements OnModuleInit {
     switch (qElement.type) {
       case QueueElementTypeEnum.GooglePatent:
         return this.googlePatents.parse(qElement);
+      case QueueElementTypeEnum.YandexPatent:
+        return this.yandexPatents.parse(qElement);
       case QueueElementTypeEnum.ArticleRU:
         return this.articleIoffe.parse(qElement);
       case QueueElementTypeEnum.ArticleEN:
         return this.articleRajpub.parse(qElement);
       default:
-        return Promise.reject(new Error(`Unimplemented type ${qElement.type}`));
+        return Promise.reject(new Error(`Unimplemented type ${qElement.type satisfies never}`));
     }
   }
 

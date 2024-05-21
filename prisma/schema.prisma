@@ -10,10 +10,12 @@ datasource db {
 }
 
 /// Патент
-model Patent {
+model PatentGoogle {
   /// Номер патента
   id                   String  @id
-  /// Название патента
+  /// Ссылка на патент в Google Patents
+  url                  String  @unique
+  // /// Название патента
   title                String?
   /// Правообладатель
   assignee             String?
@@ -42,10 +44,25 @@ model Patent {
   /// Список событий
   applicationEvents    Json?
 
-  /// Ссылка на патент в Google Patents
-  urlGoogle String? @unique
-  /// Ссылка на патент в Yandex Patents
-  urlYandex String? @unique
+  // Служебные поля
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz
+}
+
+model PatentYandex {
+  id              String   @id
+  url             String   @unique
+  title           String?
+  authors         String[]
+  assignees       String[]
+  applicationDate String? // YYYY-MM-DD
+  publishedDate   String? // YYYY-MM-DD
+  abstract        String?
+  claims          String?
+  description     String?
+  classifications String[]
+  relations       Json?
+  fipsUrl         String?
 
   // Служебные поля
   createdAt DateTime @default(now()) @db.Timestamptz
@@ -68,8 +85,9 @@ model Article {
 }
 
 /// Временная таблица Патента с извл. данными при поиске перед парсингом
-model PatentTemp {
+model PatentGoogleTemp {
   id                   String  @id
+  url                  String  @unique
   title                String?
   assignee             String?
   inventorOrAuthor     String?
@@ -77,9 +95,6 @@ model PatentTemp {
   filingOrCreationDate String? // YYYY-MM-DD
   publicationDate      String? // YYYY-MM-DD
   grantDate            String? // YYYY-MM-DD
-
-  urlGoogle String? @unique
-  urlYandex String? @unique
 }
 
 enum QueueElementTypeEnum {

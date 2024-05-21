@@ -20,10 +20,10 @@ export class YandexSearchPageParser {
 
   get documents(): { href: string, title: string }[] {
     return this.#html.querySelectorAll(YandexSearchPageParser.select.docs).reduce((acc, a) => {
-      const href = a.getAttribute('href')?.clean();
+      const href = a.getAttribute('href')?.clean().replace(/.*(?=\/doc\/)/, '');
       return href ? [...acc, {
         title: a.innerText.clean(),
-        href: new URL(href, 'https://yandex.ru/patents').href,
+        href: `https://yandex.ru/patents${href}`,
       }] : acc;
     }, []);
   }

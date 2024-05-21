@@ -1,27 +1,28 @@
 import type { PartialOnUndefinedDeep } from 'type-fest';
 import type { Nillable, Optional } from '../../types/types.js';
 
-export type PatentCreateInput = PartialOnUndefinedDeep<Patent>
-export type PatentTempCreateInput = PartialOnUndefinedDeep<PatentTemp>
+export type PatentGoogleCreateInput = PartialOnUndefinedDeep<PatentGoogle>
+export type PatentGoogleTempCreateInput = PartialOnUndefinedDeep<PatentGoogleTemp>
 
-export type PatentTemp = Pick<
-  Patent,
+export type PatentGoogleTemp = Pick<
+  PatentGoogle,
   | 'id' | 'title' | 'assignee' | 'inventorOrAuthor'
   | 'priorityDate' | 'filingOrCreationDate'
   | 'publicationDate' | 'grantDate'
-  | 'urlGoogle' | 'urlYandex'
+  | 'url'
 >
 
-export type PatentParsed = Pick<
-  Patent,
-  | 'id' | 'title'
+export type PatentGoogleParsed = Pick<
+  PatentGoogle,
+  | 'id' | 'url' | 'title'
   | 'abstract' | 'description'
   | 'claims' | 'classifications' | 'relations'
   | 'applicationEvents' | 'concepts'
 >
 
-export type Patent = {
+export type PatentGoogle = {
   id: string
+  url: string
   title: Nillable<string>
   assignee: Nillable<string>
   inventorOrAuthor: Nillable<string>
@@ -59,12 +60,10 @@ export type Patent = {
     date?: string
     assignee?: string
   }[]>
-  urlGoogle: Nillable<string>
-  urlYandex: Nillable<string>
 }
 
-export type PatentRelations = NonNullable<Patent['relations']>
-export type PatentClassification = NonNullable<Patent['classifications']>[number]
-export type PatentClaim = NonNullable<Patent['claims']>[number]
-export type PatentConcept = NonNullable<Patent['concepts']>[number]
-export type PatentApplicationEvent = NonNullable<Patent['applicationEvents']>[number]
+export type PatentGoogleRelations = NonNullable<PatentGoogle['relations']>
+export type PatentGoogleClassification = NonNullable<PatentGoogle['classifications']>[number]
+export type PatentGoogleClaim = NonNullable<PatentGoogle['claims']>[number]
+export type PatentGoogleConcept = NonNullable<PatentGoogle['concepts']>[number]
+export type PatentGoogleApplicationEvent = NonNullable<PatentGoogle['applicationEvents']>[number]

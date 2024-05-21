@@ -87,8 +87,7 @@ async function initMigration() {
     query: `
 CREATE OR REPLACE TABLE patents (
   id String,
-  urlGoogle Nullable(String),
-  urlYandex Nullable(String),
+  url Nullable(String),
   title Nullable(String),
   abstract Nullable(String),
   description Nullable(String),

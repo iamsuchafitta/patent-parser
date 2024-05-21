@@ -6,7 +6,7 @@ import { Controller, Get, HttpException, HttpStatus, Logger } from '@nestjs/comm
 import { isNil } from 'lodash-es';
 import { omitDeepBy } from 'lodash-omitdeep';
 import { PrismaService } from './prisma/prisma.service.js';
-import type { Patent } from './store/patent-store/patent.types.js';
+import type { PatentGoogle } from './store/patent-google-store/patent-google.types.js';
 
 @Controller()
 export class AppController {
@@ -32,11 +32,11 @@ export class AppController {
     const promises: Promise<void>[] = [];
 
     while (hasMore) {
-      const patentsFound = await this.prisma.patent.findMany({
+      const patentsFound = await this.prisma.patentGoogle.findMany({
         take,
         skip,
         orderBy: { id: 'asc' },
-      }) as unknown as Patent[];
+      }) as unknown as PatentGoogle[];
       if (patentsFound.length < take) hasMore = false;
       patentsCount += patentsFound.length;
       skip += take;

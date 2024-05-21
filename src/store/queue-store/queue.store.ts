@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { merge } from 'lodash-es';
+import { merge, uniqBy } from 'lodash-es';
 import { type QueueElementCreateInput, type QueueElement, QueueElementTypeEnum } from './queue.types.js';
 import { PROCESSING_TIMEOUT } from '../../app.constants.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -12,6 +12,7 @@ export class QueueStore {
     elements: QueueElementCreateInput[],
     { ignoreExisting = true }: { ignoreExisting?: boolean } = {},
   ): Promise<number> {
+    elements = uniqBy(elements, el => el.url);
     if (ignoreExisting) {
       const existing = await this.prisma.queueElement.findMany({
         where: { url: { in: elements.map(({ url }) => url) } },

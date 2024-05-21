@@ -1,8 +1,8 @@
 import * as util from 'node:util';
 import { Logger } from '@nestjs/common';
-import { Resolver, Mutation, Args, Query } from '@nestjs/graphql';
+import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { GraphQLJSON, GraphQLPositiveInt } from 'graphql-scalars';
-import { flow, isNil, values, range, throttle, flatten, isNumber, isString } from 'lodash-es';
+import { flow, isNil, values, range, throttle, flatten } from 'lodash-es';
 import ms from 'ms';
 import { parse as parseHtml, type HTMLElement } from 'node-html-parser';
 import pMap from 'p-map';
@@ -14,7 +14,6 @@ import { pShouldRetry } from '../common/p-should-retry.js';
 import { nullable } from '../common/utils.js';
 import { QueueStore } from '../store/queue-store/queue.store.js';
 import { QueueElementTypeEnum } from '../store/queue-store/queue.types.js';
-import { ArticleRajpubParser } from '../common/models/article-rajpub-parser.js';
 
 
 @Resolver()
@@ -38,12 +37,12 @@ export class ParserArticlesResolver {
     @Args('yearTo', { nullable, type: () => GraphQLPositiveInt, description: 'До года (включительно)' }) yearTo?: number,
     @Args('limit', { nullable, type: () => GraphQLPositiveInt }) limit?: number,
   ) {
-    this.logger.log(`enqueueArticlesRU ${util.inspect({ journalIds, yearFrom, yearTo, limit })}`);
+    this.logger.log(`enqueueArticlesRU(${util.inspect({ journalIds, yearFrom, yearTo, limit })})`);
     const domain = 'https://journals.ioffe.ru';
     const abortController = new AbortController();
     const retries = 9; // Reties per request
     let completed = 0;
-    const name = '[Ioffe]';
+    const LogName = '[Ioffe]';
     const logger = throttle((msg: string) => this.logger.log(msg), ms('5s'));
     /**
      * Получение ссылок на журналы
@@ -59,9 +58,9 @@ export class ParserArticlesResolver {
         retries,
         shouldRetry: pShouldRetry(abortController),
         signal: abortController.signal,
-        onFailedAttempt: (err) => this.logger.warn(`${name} Journal [${journalUrl}] attempt=${err.attemptNumber}/${retries + 1} Error: name=${err.name} msg=${err.message}`),
+        onFailedAttempt: (err) => this.logger.warn(`${LogName} Journal [${journalUrl}] attempt=${err.attemptNumber}/${retries + 1} Error: name=${err.name} msg=${err.message}`),
       }).then(parseHtml);
-      logger(`${name} Journal ${++completed}/${journalUrls.length} Done!`);
+      logger(`${LogName} Journal ${++completed}/${journalUrls.length} Done!`);
       return journalsPage;
     }, { concurrency: 5, signal: abortController.signal });
     completed = 0;
@@ -80,19 +79,19 @@ export class ParserArticlesResolver {
       issuesHrefs => issuesHrefs.filter(Boolean),
       issuesHrefs => issuesHrefs.map(href => `${domain}${(href)}`),
     )();
-    this.logger.log(`${name} journals=${journalsPages.length}, issues=${issuesUrls.length}`);
+    this.logger.log(`${LogName} journals=${journalsPages.length}, issues=${issuesUrls.length}`);
     /**
      * Получение HTML страниц выпусков
      */
     const issuesPages = await pMap(issuesUrls, (issueUrl) => pRetry(async () => {
       const issuesPage = await this.anonymous.axios.get(issueUrl, { signal: abortController.signal }).then(res => res.data).then(parseHtml);
-      logger(`${name} Issue ${++completed}/${issuesUrls.length} Done!`);
+      logger(`${LogName} Issue ${++completed}/${issuesUrls.length} Done!`);
       return issuesPage;
     }, {
       retries,
       shouldRetry: pShouldRetry(abortController),
       signal: abortController.signal,
-      onFailedAttempt: (err) => this.logger.warn(`${name} Issue [${issueUrl}] attempt=${err.attemptNumber}/${retries + 1} Error: name=${err.name} msg=${err.message}`),
+      onFailedAttempt: (err) => this.logger.warn(`${LogName} Issue [${issueUrl}] attempt=${err.attemptNumber}/${retries + 1} Error: name=${err.name} msg=${err.message}`),
     }), { concurrency: 20, signal: abortController.signal });
     completed = 0;
     logger.flush();
@@ -113,13 +112,14 @@ export class ParserArticlesResolver {
       type: QueueElementTypeEnum.ArticleRU,
       url,
     })));
-    this.logger.log(`${name} Finished: articles=${articlesUrls.length}, articlesEnqueued=${enqueued}`);
-    return {
+    const response = {
       journals: journalsPages.length,
       issues: issuesPages.length,
       articles: articlesUrls.length,
       articlesEnqueued: enqueued,
     };
+    this.logger.log(`${LogName} Finished: ${util.inspect(response)}`);
+    return response;
   }
 
   @Mutation(() => GraphQLJSON, {
@@ -134,33 +134,34 @@ export class ParserArticlesResolver {
     @Args('yearTo', { nullable, type: () => GraphQLPositiveInt, description: 'До года (включительно)' }) yearTo?: number,
     @Args('limit', { nullable, type: () => GraphQLPositiveInt }) limit?: number,
   ) {
-    this.logger.log(`enqueueArticlesEN ${util.inspect({ journalIds, yearFrom, yearTo, limit })}`);
+    this.logger.log(`enqueueArticlesEN(${util.inspect({ journalIds, yearFrom, yearTo, limit })})`);
     const abortController = new AbortController();
     let completed = 0;
-    const name = '[Rajpub]';
+    const LogName = '[Rajpub]';
     const retries = 9; // Reties per request
     const logger = throttle((msg: string) => this.logger.log(msg), ms('5s'));
     const getIssuesUrls = (html: HTMLElement) => html.querySelectorAll('.issues_archive .obj_issue_summary h2 a').map(a => a.getAttribute('href')).filter(Boolean);
+    const getJournalHtml = async (pageUrl: string) => await pRetry(async () => await this.anonymous.axios.get<string>(pageUrl, {
+      signal: abortController.signal,
+    }).then(res => res.data), {
+      retries,
+      shouldRetry: pShouldRetry(abortController),
+      signal: abortController.signal,
+      onFailedAttempt: (err) => this.logger.warn(`${LogName} Journal [${pageUrl}] attempt=${err.attemptNumber}/${retries + 1} Error: name=${err.name} msg=${err.message}`),
+    }).then(parseHtml);
     /**
      * Первичный запрос на страницы журналов с парсингом ссылок выпусков + определением количества страниц.
      */
     const initialResults = await pMap(journalIds, async (journalId) => {
-      const url = `https://rajpub.com/index.php/${journalId}/issue/archive`;
-      const html = await pRetry(async () => await this.anonymous.axios.get<string>(url, {
-        signal: abortController.signal,
-      }).then(res => res.data), {
-        retries,
-        shouldRetry: pShouldRetry(abortController),
-        signal: abortController.signal,
-        onFailedAttempt: (err) => this.logger.warn(`${name} Journal [${url}] attempt=${err.attemptNumber}/${retries + 1} Error: name=${err.name} msg=${err.message}`),
-      }).then(parseHtml);
+      const pageUrl = `https://rajpub.com/index.php/${journalId}/issue/archive`;
+      const html = await getJournalHtml(pageUrl);
       // Pagination for example: "1-25 of 62"
       const [, perPage, totalDocs] = html.querySelector('.cmp_pagination .current')?.innerText.match(/-(\d+) of (\d+)/) || [];
       const totalPages = Math.ceil(+totalDocs / +perPage);
-      logger(`${name} Initial journal request ${++completed}/${journalIds.length} done!`);
+      logger(`${LogName} Initial journal request ${++completed}/${journalIds.length} done!`);
       return {
         issuesUrls: getIssuesUrls(html),
-        journalPagesUrls: range(2, (totalPages || 1) + 1).map(page => `${url}/${page}`),
+        journalPagesUrls: range(2, (totalPages || 1) + 1).map(page => `${pageUrl}/${page}`),
       };
     }, { concurrency: 5, signal: abortController.signal }).then(pages => pages.filter(Boolean));
     completed = 0;
@@ -170,15 +171,8 @@ export class ParserArticlesResolver {
      */
     const additionalJournalPagesUrls = initialResults.flatMap(({ journalPagesUrls }) => journalPagesUrls);
     const issuesUrls = await pMap(additionalJournalPagesUrls, async pageUrl => {
-      const html = await pRetry(async () => await this.anonymous.axios.get<string>(pageUrl, {
-        signal: abortController.signal,
-      }).then(res => res.data), {
-        retries,
-        shouldRetry: pShouldRetry(abortController),
-        signal: abortController.signal,
-        onFailedAttempt: (err) => this.logger.warn(`${name} Journal [${pageUrl}] attempt=${err.attemptNumber}/${retries + 1} Error: name=${err.name} msg=${err.message}`),
-      }).then(parseHtml);
-      logger(`${name} Journal request ${++completed}/${additionalJournalPagesUrls.length} done!`);
+      const html = await getJournalHtml(pageUrl);
+      logger(`${LogName} Journal request ${++completed}/${additionalJournalPagesUrls.length} done!`);
       return getIssuesUrls(html);
     }, { concurrency: 5, signal: abortController.signal })
       .then(urls => urls.concat(initialResults.flatMap(({ issuesUrls }) => issuesUrls)))
@@ -195,16 +189,16 @@ export class ParserArticlesResolver {
         retries,
         shouldRetry: pShouldRetry(abortController),
         signal: abortController.signal,
-        onFailedAttempt: (err) => this.logger.warn(`${name} Issue ${issueUrl} attempt=${err.attemptNumber}/${retries + 1} Error: name=${err.name} msg=${err.message}`),
+        onFailedAttempt: (err) => this.logger.warn(`${LogName} Issue ${issueUrl} attempt=${err.attemptNumber}/${retries + 1} Error: name=${err.name} msg=${err.message}`),
       }).then(parseHtml);
-      logger(`${name} Issue request ${++completed}/${issuesUrls.length} done!`);
+      logger(`${LogName} Issue request ${++completed}/${issuesUrls.length} done!`);
       // Example: Published: 2016-07-30
       const publishedYear = html.querySelector('div.obj_issue_toc div.published')?.innerText.trim().match(/(?<=Published:\s+)\d{4}(?=-\d\d-\d\d)/)?.[0].toInt();
       if (publishedYear && isFinite(publishedYear) && (isNil(yearFrom) || publishedYear >= yearFrom) && (isNil(yearTo) || publishedYear <= yearTo)) {
         return html.querySelectorAll('ul.articles h3.title a').map(a => a.getAttribute('href')).filter(Boolean);
       }
       return [];
-    }, { concurrency: 20, signal: abortController.signal }).then(flatten);
+    }, { concurrency: 20, signal: abortController.signal }).then(flatten).then(urls => urls.slice(0, limit));
     completed = 0;
     logger.flush();
     /**
@@ -214,21 +208,13 @@ export class ParserArticlesResolver {
       type: QueueElementTypeEnum.ArticleEN,
       url,
     })));
-    this.logger.log(`${name} Finished: journals=${journalIds.length}, issues=${issuesUrls.length}, articles=${articlesUrls.length}, articlesEnqueued=${articlesEnqueued}`);
-    return {
+    const response = {
       journals: journalIds.length,
       issues: issuesUrls.length,
       articles: articlesUrls.length,
       articlesEnqueued,
     };
-  }
-
-  @Query(()=>GraphQLJSON)
-  async testParseArticleEN(
-    @Args('url', { type: () => String }) url: string,
-  ) {
-    const htmlStr = await this.anonymous.axios.get(url).then(res => res.data);
-    const parsed = ArticleRajpubParser.parse(htmlStr);
-    return parsed;
+    this.logger.log(`${LogName} Finished: ${util.inspect(response)}`);
+    return response;
   }
 }

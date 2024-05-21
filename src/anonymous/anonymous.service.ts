@@ -89,7 +89,7 @@ export class AnonymousService {
    */
   public async startPuppeteer({ blockCSS = true, blockImg }: { blockCSS?: boolean, blockImg?: boolean } = {}) {
     const browser = await puppeteer.default.launch({
-      args: [`--proxy-server=${await this.getNextProxyUrl()}`, '--no-sandbox', '--disable-setuid-sandbox'],
+      args: [`--proxy-server=${await this.getNextProxyUrl()}`, '--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security'],
       headless: 'shell',
       // headless: true,
       // headless: false,

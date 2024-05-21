@@ -1,8 +1,18 @@
 import dayjs from 'dayjs';
+import { isUndefined, isPlainObject, keys } from 'lodash-es';
+import { omitDeepBy } from 'lodash-omitdeep';
 import neatCsv from 'neat-csv';
-import type { PatentTempCreateInput } from '../store/patent-store/patent.types.js';
+import type { PatentGoogleTempCreateInput } from '../store/patent-google-store/patent-google.types.js';
 
 export const nullable = true;
+
+export function clearDeepUndefinedAndEmptyArrays<T extends object>(v: T) {
+  return omitDeepBy(v, function (v: any) {
+    return isUndefined(v)
+      || v?.length === 0
+      || isPlainObject(v) && keys(v).length === 0;
+  }) as T;
+}
 
 export function getFirstAndLastMonthsDaysOfYear(year: number): [string, string][] {
   return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((month) => {
@@ -23,6 +33,6 @@ export async function parseGooglePatentSearchCSV(csvString: string) {
     filingOrCreationDate: row[5],
     publicationDate: row[6],
     grantDate: row[7],
-    urlGoogle: row[8],
-  } satisfies PatentTempCreateInput));
+    url: row[8],
+  } satisfies PatentGoogleTempCreateInput));
 }

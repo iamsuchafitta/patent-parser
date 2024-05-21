@@ -6,7 +6,7 @@ import pRetry from 'p-retry';
 import { AnonymousService } from '../anonymous/anonymous.service.js';
 import { GooglePatentParser } from '../common/models/google-patent-parser.js';
 import { pShouldRetry } from '../common/p-should-retry.js';
-import { PatentStore } from '../store/patent-store/patent.store.js';
+import { PatentGoogleStore } from '../store/patent-google-store/patent-google.store.js';
 import type { QueueElement } from '../store/queue-store/queue.types.js';
 
 /**
@@ -19,7 +19,7 @@ export class ParserGooglePatentsService {
 
   constructor(
     private readonly anonymous: AnonymousService,
-    private readonly patentStore: PatentStore,
+    private readonly patentGoogleStore: PatentGoogleStore,
   ) {
     this.parse = this.parse.bind(this);
   }
@@ -67,15 +67,10 @@ export class ParserGooglePatentsService {
       onFailedAttempt: (err) => this.logger.warn(`[${elem.url}] attempt=${err.attemptNumber}/${retries + 1} failed: ${err.message}`),
     });
     // Parse
-    const patent = await GooglePatentParser.parse({
-      ...result,
-      url: elem.url,
-    });
+    const patent = await GooglePatentParser.parse({ ...result, url: elem.url });
     // Save
-    await this.patentStore.patentUpsert({
-      ...patent,
-      urlGoogle: elem.url,
-    });
+    await this.patentGoogleStore.patentUpsert(patent);
+    // Log: Done
     this.logger.log(`[${elem.url}] Done in ${(Date.now() / 1000 - time).toFixed(2)}sec!`);
   }
 }

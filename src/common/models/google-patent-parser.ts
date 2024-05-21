@@ -1,15 +1,17 @@
 import { range } from 'lodash-es';
 import neatCsv from 'neat-csv';
 import { type HTMLElement, parse as htmlParse } from 'node-html-parser';
-import {
-  type PatentRelations,
-  type PatentClaim,
-  type PatentClassification,
-  type Patent,
-  type PatentApplicationEvent, type PatentParsed,
-} from '../../store/patent-store/patent.types.js';
+import type {
+  PatentGoogleRelations,
+  PatentGoogleClaim,
+  PatentGoogleClassification,
+  PatentGoogle,
+  PatentGoogleApplicationEvent,
+  PatentGoogleParsed,
+  PatentGoogleConcept,
+} from '../../store/patent-google-store/patent-google.types.js';
 
-export class GooglePatentParser implements PatentParsed {
+export class GooglePatentParser implements PatentGoogleParsed {
   private readonly select = {
     PubNum: 'h2#pubnum',
     PubNumFromUrl: /\/patent\/([A-Z]{2}\d+[A-Z]\d*)(\/|$)/,
@@ -29,20 +31,19 @@ export class GooglePatentParser implements PatentParsed {
   readonly #html: HTMLElement;
   #conceptsCSV: ConceptFromCsv[] | undefined;
 
-  private constructor(
-    args: { url: string, html: HTMLElement },
-  ) {
+  private constructor(args: { url: string, html: HTMLElement }) {
     this.url = args.url;
     this.#html = args.html;
   }
 
   public static async parse(
     args: { url: string, html: string, conceptsCSVStr?: string },
-  ): Promise<PatentParsed> {
+  ): Promise<PatentGoogleParsed> {
     const parser = new GooglePatentParser({ url: args.url, html: htmlParse(args.html) });
     parser.#conceptsCSV = args.conceptsCSVStr ? await neatCsv<ConceptFromCsv>(args.conceptsCSVStr) : undefined;
     return {
       id: parser.id,
+      url: args.url,
       title: parser.title,
       abstract: parser.abstract,
       description: parser.description,
@@ -54,50 +55,50 @@ export class GooglePatentParser implements PatentParsed {
     };
   }
 
-  get id(): Patent['id'] {
-    return this.#html.querySelector(this.select.PubNum)?.innerText.trim().replace(/\s+/g, ' ')
+  get id(): PatentGoogle['id'] {
+    return this.#html.querySelector(this.select.PubNum)?.innerText.clean()
       || this.select.PubNumFromUrl.exec(this.url)?.[1] as string;
   }
 
-  get title(): Patent['title'] {
-    return this.#html.querySelector(this.select.Title)?.innerText.trim().replace(/\s+/g, ' ');
+  get title(): PatentGoogle['title'] {
+    return this.#html.querySelector(this.select.Title)?.innerText.clean();
   }
 
-  get abstract(): Patent['abstract'] {
-    return this.#html.querySelector(this.select.Abstract)?.innerText.trim().replace(/\s+/g, ' ');
+  get abstract(): PatentGoogle['abstract'] {
+    return this.#html.querySelector(this.select.Abstract)?.innerText.clean();
   }
 
-  get description(): Patent['description'] {
+  get description(): PatentGoogle['description'] {
     return this.#html.querySelectorAll(this.select.Description)
-      .map(el => el.innerText.trim().replace(/\s+/g, ' '))
+      .map(el => el.innerText.clean())
       .join('\n\n') || undefined;
   }
 
-  get claims(): PatentClaim[] {
+  get claims(): PatentGoogleClaim[] {
     return this.#html.querySelectorAll(this.select.Claims)
       .map((el, i) => ({
         index: i,
-        text: el.innerText.trim().replace(/\s+/g, ' '),
+        text: el.innerText.clean(),
         isDependent: el.classList.contains('claim-dependent'),
       }));
   }
 
-  get classifications(): PatentClassification[] {
+  get classifications(): PatentGoogleClassification[] {
     return this.#html.querySelectorAll(this.select.Classifications)
       .map(el => ({
-        id: el.querySelector(this.select.ClassificationId)?.innerText.trim().replace(/\s+/g, ' '),
-        description: el.querySelector(this.select.ClassificationDescription)?.innerText.trim().replace(/\s+/g, ' '),
+        id: el.querySelector(this.select.ClassificationId)?.innerText.clean(),
+        description: el.querySelector(this.select.ClassificationDescription)?.innerText.clean(),
       }));
   }
 
-  get relations(): PatentRelations {
+  get relations(): PatentGoogleRelations {
     // Citations
     const allCitations = this.#html.querySelectorAll(this.select.AllCitations)
-      .map(el => (el.querySelector('a') || el).innerText.trim().replace(/\s+/g, ' '));
+      .map(el => (el.querySelector('a') || el).innerText.clean().clean());
     const citationsFamilyFromIdx = allCitations.findIndex((el) => /Family/i.test(el));
     // Cited by
     const allCitedBy = this.#html.querySelectorAll(this.select.AllCitedBy)
-      .map(el => (el.querySelector('a') || el).innerText.trim().replace(/\s+/g, ' '));
+      .map(el => (el.querySelector('a') || el).innerText.clean());
     const citedByFamilyFromIdx = allCitedBy.findIndex((el) => /Family/i.test(el));
     return {
       citations: allCitations.slice(0, citationsFamilyFromIdx),
@@ -105,15 +106,15 @@ export class GooglePatentParser implements PatentParsed {
       citedBy: allCitedBy.slice(0, citedByFamilyFromIdx),
       citedByFamilyToFamily: allCitedBy.slice(citedByFamilyFromIdx + 1),
       similarDocuments: this.#html.querySelectorAll(this.select.SimilarDocuments)
-        .map<string>(el => el.innerText.trim().replace(/\s+/g, ' ')),
+        .map<string>(el => el.innerText.clean()),
     };
   }
 
-  get applicationEvents(): PatentApplicationEvent[] {
+  get applicationEvents(): PatentGoogleApplicationEvent[] {
     const applEvents = this.#html.querySelectorAll('.event.application-timeline.horizontal');
     return applEvents.map(el => ({
-      date: el.querySelector('div:first-child')?.innerText.trim().replace(/\s+/g, ' '),
-      assignee: el.querySelector('div:last-child')?.innerText.trim().replace(/\s+/g, ' '),
+      date: el.querySelector('div:first-child')?.innerText.clean(),
+      assignee: el.querySelector('div:last-child')?.innerText.clean(),
     }));
   }
 
@@ -121,14 +122,14 @@ export class GooglePatentParser implements PatentParsed {
   //   return this.html.querySelector('.knowledge-card dl.scholar-result.key-dates a')?.innerText;
   // }
 
-  get concepts(): Patent['concepts'] {
+  get concepts(): PatentGoogleConcept[] {
     const rows = this.#html.querySelectorAll('h3#concepts~.responsive-table .tbody>div.tr').map(row => {
       const [name,/*image*/, sections, _count] = row.querySelectorAll('span.td');
-      const count = +_count.innerText.trim().replace(/\s+/g, ' ');
+      const count = +_count.innerText.clean();
       return {
-        name: name.innerText.trim().replace(/\s+/g, ' '),
+        name: name.innerText.clean(),
         // image: image, // unknown type
-        sections: sections.innerText.trim().replace(/\s+/g, ' '), // delimiter: ','
+        sections: sections.innerText.clean(), // delimiter: ','
         count: Number.isNaN(count) ? undefined : count,
       };
     });

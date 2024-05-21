@@ -55,7 +55,6 @@ export class GoogleSearchUrl extends URL {
     const intervalDaysMax = this.settings.splitDateIntervalByDays;
     if (!intervalDaysMax) return [this.urlDownloadCSV];
     const dateIntervalType = dateIntervalParse(this.searchParams.get(this.keys.dateFrom)!);
-    console.log('dateIntervalType', dateIntervalType);
     return splitDateInterval({
       dateFrom: dateParse(this.searchParams.get(this.keys.dateFrom)!),
       dateTo: dateParse(this.searchParams.get(this.keys.dateTo)!),

@@ -1,7 +1,8 @@
+import util from 'node:util';
 import { Logger } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { GraphQLJSON } from 'graphql-scalars';
-import { ceil, divide, range, flatten } from 'lodash-es';
+import { ceil, range, flow } from 'lodash-es';
 import ms from 'ms';
 import pMap from 'p-map';
 import pRetry from 'p-retry';
@@ -24,6 +25,7 @@ export class ParserYandexPatentsResolver {
 
   @Mutation(() => GraphQLJSON)
   async enqueueYandexPatents(@Args('input', { defaultValue: new YandexSearchInput() }) input: YandexSearchInput) {
+    this.logger.log(`enqueueYandexPatents(${util.inspect(input, { depth: null })})`);
     const url = new YandexSearchUrl(input);
     const abortController = new AbortController();
     let pageTo = NaN;
@@ -33,7 +35,7 @@ export class ParserYandexPatentsResolver {
      * Fetches a single page of search results
      */
     const fetchPage = async (_url: YandexSearchUrl): Promise<YandexSearchPageParser> => pRetry(async (attempt) => {
-      this.logger.log(`${LogName} page=${_url.getPage()}/${pageTo} attempt=${attempt}/${retries}`);
+      this.logger.log(`${LogName}${isNaN(pageTo) ? ' Initial' : ''} page=${_url.getPage()}/${pageTo ? pageTo : 'unknown'} attempt=${attempt}/${retries + 1}`);
       const { browser, page } = await this.anonymous.startPuppeteer({ blockImg: true });
       try {
         await page.goto(_url.href, { waitUntil: 'load', timeout: ms('60s') });
@@ -52,10 +54,11 @@ export class ParserYandexPatentsResolver {
      * Fetch first page to get total count of documents and calc total pages
      */
     const pageInitial = await fetchPage(url);
-    pageTo = Math.min(
-      ceil(divide(Math.min(pageInitial.totalFoundedDocs, input.parserSettings.maxCount), input.parserSettings.perPage)),
-      input.parserSettings.pageTo,
-    );
+    pageTo = flow(
+      (totalFoundedDocs: number) => Math.min(totalFoundedDocs, input.parserSettings.maxCount),
+      rez => ceil(rez / input.parserSettings.perPage),
+      rez => Math.min(rez, input.parserSettings.pageTo),
+    )(pageInitial.totalFoundedDocs);
     const pageNums: number[] = range(input.parserSettings.pageFrom, pageTo + 1);
     this.logger.log(`${LogName} totalDocs=${pageInitial.totalFoundedDocs}, pages=${pageNums.at(0)}..=${pageNums.at(-1)}`);
     const takeFromLastPage = input.parserSettings.maxCount - (pageNums.length - 1) * input.parserSettings.perPage;
@@ -69,7 +72,7 @@ export class ParserYandexPatentsResolver {
         return parser.documents.slice(0, idx === pageNums.length - 1 ? takeFromLastPage : undefined);
       },
       { concurrency: input.parserSettings.concurrent },
-    ).then(docsPerPage => [pageInitial.documents, ...docsPerPage]).then(flatten);
+    ).then(documentsPerPage => [pageInitial.documents, ...documentsPerPage].flat());
     /**
      * Enqueue all fetched documents.
      */
@@ -77,12 +80,14 @@ export class ParserYandexPatentsResolver {
       url: doc.href,
       type: QueueElementTypeEnum.YandexPatent,
     })), { ignoreExisting: true });
-    return {
+    const response = {
       pageFrom: input.parserSettings.pageFrom,
       pageTo,
       docsTotal: pageInitial.totalFoundedDocs,
       docsTaken: docs.length,
       docsEnqueued,
     };
+    this.logger.log(`${LogName} Finished: ${util.inspect(response)}`);
+    return response;
   }
 }
