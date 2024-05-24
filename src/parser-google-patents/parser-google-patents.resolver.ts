@@ -1,5 +1,5 @@
-import { scheduler } from 'node:timers/promises';
-import { InternalServerErrorException, Logger } from '@nestjs/common';
+import util from 'node:util';
+import { Logger } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { GraphQLJSON } from 'graphql-scalars';
 import { flatten } from 'lodash-es';
@@ -30,14 +30,14 @@ export class ParserGooglePatentsResolver {
     @Args('input', { defaultValue: new GoogleSearchInput() }) input: GoogleSearchInput,
     @Args('settings', { defaultValue: new GoogleSearchSettingsInput() }) settings: GoogleSearchSettingsInput,
   ) {
-    const urls = GoogleSearchUrl.createPartitioned(input, settings);
-    this.logger.log(`enqueueGooglePatents, urls=${urls.length}`);
+    const searchUrls = GoogleSearchUrl.createPartitioned(input, settings);
+    this.logger.log(`enqueueGooglePatents(${util.inspect(input, { depth: null })}, parts=${searchUrls.length})`);
     const retries = 19;
     const abortController = new AbortController();
     let completed = 0;
-    const results = await pMap(urls, async (url, idx) => {
-      await scheduler.wait(idx * 0.5 * 1e3);
-      const stringCSV = await pRetry<string>(async () => {
+    let results = await pMap(searchUrls, async (url, idx) => {
+      const csvString = await pRetry<string>(async () => {
+        this.logger.log(`Search part loading ${completed + 1}/${searchUrls.length}...`);
         return await this.anonymous.axios.get<string>(url, { signal: abortController.signal }).then((res) => res.data);
       }, {
         retries,
@@ -46,20 +46,24 @@ export class ParserGooglePatentsResolver {
         minTimeout: 10e3,
         maxTimeout: 30e3,
         randomize: true,
-        onFailedAttempt: (err) => this.logger.warn(`[${idx + 1}/${urls.length}] attempt=${err.attemptNumber}/${retries + 1} failed: ${err.message}`),
+        onFailedAttempt: (err) => this.logger.warn(`[${idx + 1}/${searchUrls.length}] attempt=${err.attemptNumber}/${retries + 1} failed: ${err.message}`),
       });
-      this.logger.log(`Pages completed: ${++completed}/${urls.length}`);
-      return await parseGooglePatentSearchCSV(stringCSV);
-    }, { concurrency: 2, signal: abortController.signal }).catch((err) => {
-      abortController.abort();
-      // throw new InternalServerErrorException(`Error on google patents search: ${err.message}`);
-      throw new InternalServerErrorException(err);
-    }).then(flatten);
+      ++completed;
+      return await parseGooglePatentSearchCSV(csvString);
+    }, { concurrency: 1, signal: abortController.signal }).then(flatten);
+    const patentsFound = results.length;
+    if (settings.isIgnoreExisting) {
+      const urls = results.map((p) => p.url);
+      const filtered = await this.patentGoogleStore.filterNotExisting(urls);
+      results = results.filter((r) => filtered.includes(r.url));
+    }
     await this.patentGoogleStore.patentTempCreateMany(results);
-    const enqueued = await this.queueStore.queueCreateMany(results.map((p) => ({
+    const patentsEnqueued = await this.queueStore.queueCreateMany(results.map((p) => ({
       url: p.url,
       type: QueueElementTypeEnum.GooglePatent,
     })));
-    return { parts: urls.length, total: results.length, enqueued };
+    const response = { searchParts: searchUrls.length, patentsFound, patentsEnqueued };
+    this.logger.log(`Finished: ${util.inspect(response)}`);
+    return response;
   }
 }

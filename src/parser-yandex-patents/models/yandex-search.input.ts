@@ -15,17 +15,20 @@ export class YandexSearchSettings {
   })
   perPage: number = _DEFAULT.perPage;
 
-  @Field(() => GraphQLPositiveInt, { description: 'Усечь до кол-ва патентов', defaultValue: Number.MAX_SAFE_INTEGER })
-  maxCount: number = Number.MAX_SAFE_INTEGER;
+  @Field(() => GraphQLPositiveInt, { nullable, description: 'Усечь до кол-ва патентов' })
+  maxCount?: number;
 
   @Field(() => GraphQLNonNegativeInt, { description: 'Начиная со страницы', defaultValue: _DEFAULT.pageFrom })
   pageFrom: number = _DEFAULT.pageFrom;
 
-  @Field(() => GraphQLPositiveInt, { description: 'Заканчивая страницей (включительно)', defaultValue: Number.MAX_SAFE_INTEGER })
-  pageTo: number = Number.MAX_SAFE_INTEGER;
+  @Field(() => GraphQLPositiveInt, { nullable, description: 'Заканчивая страницей (включительно)' })
+  pageTo?: number;
 
   @Field(() => GraphQLPositiveInt, { description: 'Кол-во параллельных запросов', defaultValue: _DEFAULT.concurrent })
   concurrent: number = _DEFAULT.concurrent;
+
+  @Field(() => Boolean, { description: 'Игнорировать существующие патенты в БД', defaultValue: _DEFAULT.isIgnoreExisting })
+  isIgnoreExisting: boolean = _DEFAULT.isIgnoreExisting;
 }
 
 @InputType()

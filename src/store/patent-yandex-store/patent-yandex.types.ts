@@ -1,6 +1,6 @@
 import { Optional, type Nillable } from '../../types/types.js';
 
-export type PatentYandex = {
+export type PatentYandexEntity = {
   id: string
   url: string
   title: Nillable<string>

@@ -15,16 +15,24 @@ export class YandexSearchPageParser {
   }
 
   public static async puppeteerWait(page: Page, opts?: WaitForSelectorOptions) {
-    await Promise.all(values(YandexSearchPageParser.select).map(selector => page.waitForSelector(selector, opts)));
+    await Promise.race([
+      Promise.all(values(YandexSearchPageParser.select).map(selector => page.waitForSelector(selector, opts))),
+      page.evaluate(async () => new Promise<void>((resolve) => {
+        const interval = setInterval(() => {
+          const notFoundSpan = document.querySelector('div.content-left.common-font.content-left__desktop > span');
+          if (/По вашему запросу ничего не нашлось/i.test(notFoundSpan?.textContent || '')) {
+            resolve();
+            clearInterval(interval);
+          }
+        }, 1e3);
+      }), opts),
+    ]);
   }
 
-  get documents(): { href: string, title: string }[] {
+  get documents(): string[] {
     return this.#html.querySelectorAll(YandexSearchPageParser.select.docs).reduce((acc, a) => {
       const href = a.getAttribute('href')?.clean().replace(/.*(?=\/doc\/)/, '');
-      return href ? [...acc, {
-        title: a.innerText.clean(),
-        href: `https://yandex.ru/patents${href}`,
-      }] : acc;
+      return href ? [...acc, `https://yandex.ru/patents${href}`] : acc;
     }, []);
   }
 
@@ -32,7 +40,7 @@ export class YandexSearchPageParser {
     const b = this.#html.querySelector(YandexSearchPageParser.select.totalFoundedDocs);
     const count = b?.innerText.clean().match(/(?<=Нашлось документов: )\d+/)?.at(0)?.toInt();
     if (isNil(count) || Number.isNaN(count)) {
-      throw new Error('Can not parse total founded docs count');
+      return 0;
     }
     return count;
   }

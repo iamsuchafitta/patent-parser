@@ -1,7 +1,9 @@
 import { type HTMLElement, parse as parseHtml } from 'node-html-parser';
 import type { Page, WaitForSelectorOptions } from 'puppeteer';
-import type { PatentYandex } from '../../store/patent-yandex-store/patent-yandex.types.js';
-import { clearDeepUndefinedAndEmptyArrays } from '../utils.js';
+import type { PatentYandexEntity } from '../../store/patent-yandex-store/patent-yandex.types.js';
+
+// :contains() pseudo-class isn't supported by the native DOM API, but node-html-parser supports it. Info:
+// http://www.w3.org/TR/css3-selectors/#content-selectors
 
 export class YandexPatentParser {
   public static readonly select = {
@@ -21,9 +23,9 @@ export class YandexPatentParser {
     await page.waitForSelector(YandexPatentParser.select.id, opts);
   }
 
-  public static parse(args: { html: string, url: string }): PatentYandex {
+  public static parse(args: { html: string, url: string }): PatentYandexEntity {
     const parser = new YandexPatentParser({ html: parseHtml(args.html) });
-    return clearDeepUndefinedAndEmptyArrays({
+    return {
       id: parser.id,
       url: args.url,
       title: parser.title,
@@ -37,7 +39,7 @@ export class YandexPatentParser {
       classifications: parser.classifications,
       relations: parser.relations,
       fipsUrl: parser.fipsUrl,
-    });
+    };
   }
 
   get id() {

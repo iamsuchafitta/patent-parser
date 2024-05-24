@@ -1,7 +1,6 @@
 import dayjs, { type Dayjs } from 'dayjs';
 import { GoogleSearchDateIntervalType } from '../../parser-google-patents/enums/google-search-date-interval-type.enum.js';
 import { GoogleSearchLanguageEnum } from '../../parser-google-patents/enums/google-search-language.enum.js';
-import { GoogleSearchStatusEnum } from '../../parser-google-patents/enums/google-search-status.enum.js';
 import { GoogleSearchTypeEnum } from '../../parser-google-patents/enums/google-search-type.enum.js';
 import type { GoogleSearchSettingsInput } from '../../parser-google-patents/inputs/google-search-settings.input.js';
 import type { GoogleSearchInput } from '../../parser-google-patents/inputs/google-search.input.js';
@@ -15,9 +14,9 @@ export class GoogleSearchUrl extends URL {
   public static default = {
     dateIntervalType: GoogleSearchDateIntervalType.Publication,
     languages: [GoogleSearchLanguageEnum.Russian],
-    status: GoogleSearchStatusEnum.Application,
     type: GoogleSearchTypeEnum.Patent,
     splitDateIntervalByDays: 21,
+    isIgnoreExisting: true,
   } as const satisfies Partial<GoogleSearchInput & GoogleSearchSettingsInput>;
 
 

@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
+import events from 'node:events';
 import net from 'node:net';
 import process from 'node:process';
 import { Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
-import Axios, { type AxiosInstance } from 'axios';
+import Axios, { type AxiosInstance, type AxiosError } from 'axios';
 import { random, compact } from 'lodash-es';
 import ms from 'ms';
 import puppeteer from 'puppeteer-extra';
@@ -27,8 +28,9 @@ export class AnonymousService {
   public readonly axios: AxiosInstance;
 
   constructor() {
-    // Увеличиваем лимит на количество слушателей событий, чтобы избежать предупреждений NodeJS.
+    // Увеличиваем лимит количества слушателей событий для избежания утечек при использовании AbortController и запуске браузеров.
     process.setMaxListeners(AppConfig.concurrent.summaryLimit * 2);
+    events.setMaxListeners(100);
     // Создание анонимного axios
     this.axios = Axios.create({
       xsrfCookieName: 'csrftoken',
@@ -42,7 +44,18 @@ export class AnonymousService {
       config.headers['User-Agent'] = this.userAgentGenerator.random().toString();
       return config;
     });
-    this.axios.interceptors.response.use(undefined, async (error) => {
+    this.axios.interceptors.response.use(undefined, async (error: AxiosError) => {
+      // https://icanhazip.com
+      // https://api.ipify.org
+      // https://jsonip.com
+      // const { data: ip } = await axios.get('https://api.ipify.org', {
+      //   xsrfCookieName: 'csrftoken',
+      //   xsrfHeaderName: 'X-CSRFToken',
+      //   withCredentials: false,
+      //   httpAgent: error.config!.httpAgent,
+      //   httpsAgent: error.config!.httpsAgent,
+      //   headers: { 'User-Agent': this.userAgentGenerator.random().toString() },
+      // });
       if (error.code !== 'ERR_CANCELED') await this.thereWasException();
       throw error;
     });
@@ -126,9 +139,12 @@ export class AnonymousService {
   /**
    * Увеличение счетчика ошибок и сброс прокси, если счетчик достигнет лимита
    */
-  public async thereWasException() {
+  public async thereWasException(ip?: string) {
     this.errorsCount += 1;
-    const warnMsg = `Connection exceptions count: ${this.errorsCount}/${this.ERRORS_TO_PROXY_RESET}`;
+    const warnMsg = compact([
+      `ExceptionsСount=${this.errorsCount}/${this.ERRORS_TO_PROXY_RESET}`,
+      ip && `LastIP=${ip}`,
+    ]).join(', ');
     if (this.errorsCount < this.ERRORS_TO_PROXY_RESET) {
       this.logger.warn(warnMsg);
     } else {

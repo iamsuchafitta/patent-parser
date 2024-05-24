@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import { parse as parseHtml, type HTMLElement } from 'node-html-parser';
-import type { Article, ArticleParsed } from '../../store/article-store/article.types.js';
+import type { ArticleEntity, ArticleParsed } from '../../store/article-store/article.types.js';
 
 export class ArticleIoffeParser implements ArticleParsed {
   readonly #domain = 'https://journals.ioffe.ru';
@@ -34,15 +34,15 @@ export class ArticleIoffeParser implements ArticleParsed {
     };
   }
 
-  public get title(): Article['title'] {
+  public get title(): ArticleEntity['title'] {
     return this.#html.querySelector(this.#select.title)?.structuredText.clean();
   }
 
-  public get journalName(): Article['journalName'] {
+  public get journalName(): ArticleEntity['journalName'] {
     return this.#html.querySelector(this.#select.journalName)?.structuredText.clean();
   }
 
-  public get authors(): Article['authors'] {
+  public get authors(): ArticleEntity['authors'] {
     return this.#html.querySelector(this.#select.authors)?.structuredText.trim()
       ?.replace(/(?<=\d|\.)\s*,\s*(?=[А-ЯЁа-яёA-Za-z])/igm, '<SPLITTER>')
       .split('<SPLITTER>')
@@ -55,14 +55,14 @@ export class ArticleIoffeParser implements ArticleParsed {
       });
   }
 
-  public get organizations(): Article['organizations'] {
+  public get organizations(): ArticleEntity['organizations'] {
     return this.#html.querySelector(this.#select.organizations)?.structuredText.trim()
       ?.split('\n')
       .map((org) => org.clean().replace(/^\d+/, ''))
       .filter(Boolean);
   }
 
-  public get date(): Article['date'] {
+  public get date(): ArticleEntity['date'] {
     // Examples: Выставление онлайн: 30 декабря 2023 г.
     //           Выставление онлайн: 9 апреля 2024 г.
     const text = this.#html.querySelector(this.#select.date)?.structuredText.clean();
@@ -70,11 +70,11 @@ export class ArticleIoffeParser implements ArticleParsed {
     return rez && dayjs(rez, 'D MMMM YYYY', 'ru').utc(true).format('YYYY-MM-DD');
   }
 
-  public get abstract(): Article['abstract'] {
+  public get abstract(): ArticleEntity['abstract'] {
     return this.#html.querySelector(this.#select.abstract)?.structuredText.trim();
   }
 
-  public get pdfUrl(): Article['pdfUrl'] {
+  public get pdfUrl(): ArticleEntity['pdfUrl'] {
     return this.#html.querySelector(this.#select.pdfAnchor)?.getAttribute('href')?.replace(/^/, this.#domain);
   }
 }

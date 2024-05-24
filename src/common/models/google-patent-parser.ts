@@ -5,7 +5,7 @@ import type {
   PatentGoogleRelations,
   PatentGoogleClaim,
   PatentGoogleClassification,
-  PatentGoogle,
+  PatentGoogleEntity,
   PatentGoogleApplicationEvent,
   PatentGoogleParsed,
   PatentGoogleConcept,
@@ -55,20 +55,20 @@ export class GooglePatentParser implements PatentGoogleParsed {
     };
   }
 
-  get id(): PatentGoogle['id'] {
+  get id(): PatentGoogleEntity['id'] {
     return this.#html.querySelector(this.select.PubNum)?.innerText.clean()
       || this.select.PubNumFromUrl.exec(this.url)?.[1] as string;
   }
 
-  get title(): PatentGoogle['title'] {
+  get title(): PatentGoogleEntity['title'] {
     return this.#html.querySelector(this.select.Title)?.innerText.clean();
   }
 
-  get abstract(): PatentGoogle['abstract'] {
+  get abstract(): PatentGoogleEntity['abstract'] {
     return this.#html.querySelector(this.select.Abstract)?.innerText.clean();
   }
 
-  get description(): PatentGoogle['description'] {
+  get description(): PatentGoogleEntity['description'] {
     return this.#html.querySelectorAll(this.select.Description)
       .map(el => el.innerText.clean())
       .join('\n\n') || undefined;

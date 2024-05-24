@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { isUndefined } from 'lodash-es';
-import { omitDeepBy } from 'lodash-omitdeep';
-import type { PatentGoogleCreateInput, PatentGoogleTempCreateInput } from './patent-google.types.js';
-import { PrismaService } from '../../prisma/prisma.service.js';
+import { difference, chunk } from 'lodash-es';
+import type { PatentGoogleCreateInput, PatentGoogleTempCreateInput, PatentGoogleEntity } from './patent-google.types.js';
+import { CHUNK_CLICKHOUSE_LIMIT, CHUNK_PRISMA_LIMIT } from '../../app.constants.js';
+import { omitEmptyStructures } from '../../common/utils.js';
+import { clickhouseClient } from '../clickhouse-client.js';
+import { PrismaService } from '../prisma.service.js';
+
 
 @Injectable()
 export class PatentGoogleStore {
@@ -14,40 +17,32 @@ export class PatentGoogleStore {
    * @returns void - Ничего не возвращает.
    */
   async patentUpsert(patent: PatentGoogleCreateInput) {
-    const temp = patent.url
-      ? await this.prisma.patentGoogleTemp.findUnique({ where: { url: patent.url! } })
-      : undefined;
-    const clean = (v: any) => isUndefined(v) || v?.length === 0;
-    const insertData = omitDeepBy({
-      ...patent,
-      ...(temp ? temp : {}),
-    } satisfies PatentGoogleCreateInput, clean) as PatentGoogleCreateInput;
-    await this.prisma.$transaction(async tr => {
-      await this.prisma.patentGoogle.upsert({
-        where: { id: patent.id },
-        create: insertData,
-        update: insertData,
-      });
-      if (temp) {
-        await tr.patentGoogleTemp.delete({ where: { id: temp.id } });
-      }
-    }).catch(err => {
-      console.error(err.message, insertData);
-      throw err;
-    });
+    const temp = await this.prisma.patentGoogleTemp.findUnique({ where: { url: patent.url } });
+    const insertData: PatentGoogleCreateInput = omitEmptyStructures({ ...patent, ...temp });
+    await clickhouseClient.insert({ table: 'patent_google', values: insertData, format: 'JSON' });
+    if (temp) {
+      await this.prisma.patentGoogleTemp.delete({ where: { id: temp.id } });
+    }
+  }
+
+  public async filterNotExisting(urls: string[]): Promise<string[]> {
+    const urlsExisting = await Promise.all(chunk(urls, CHUNK_CLICKHOUSE_LIMIT).map(async (urlsChunk) => {
+      return clickhouseClient.query({
+        // language=ClickHouse
+        query: `SELECT url
+                FROM patent_google
+                WHERE url IN {urls: Array(String)}`,
+        query_params: { urls: urlsChunk },
+        format: 'JSONEachRow',
+      }).then(data => data.json<Pick<PatentGoogleEntity, 'url'>>());
+    })).then(results => results.flat().map(({ url }) => url));
+    return difference(urls, urlsExisting);
   }
 
   async patentTempCreateMany(input: PatentGoogleTempCreateInput[]) {
-    return this.prisma.$transaction(async tr => {
-      await tr.patentGoogleTemp.deleteMany({ where: { id: { in: input.map(p => p.id) } } });
-      return tr.patentGoogleTemp.createMany({ data: input });
-    });
-  }
-
-  async patentURLsExisting(searchURLs: string[]): Promise<Set<string>> {
-    return this.prisma.patentGoogle.findMany({
-      where: { url: { in: searchURLs } },
-      select: { url: true },
-    }).then((rows) => new Set(rows.map((row) => row.url!)));
+    await this.prisma.$transaction(async tr => await Promise.all(chunk(input, CHUNK_PRISMA_LIMIT).map(async (inputChunk) => {
+      await tr.patentGoogleTemp.deleteMany({ where: { id: { in: inputChunk.map(p => p.id) } } });
+      await tr.patentGoogleTemp.createMany({ data: inputChunk });
+    })));
   }
 }

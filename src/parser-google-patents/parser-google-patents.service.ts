@@ -64,7 +64,10 @@ export class ParserGooglePatentsService {
     }, {
       retries,
       shouldRetry: pShouldRetry(),
-      onFailedAttempt: (err) => this.logger.warn(`[${elem.url}] attempt=${err.attemptNumber}/${retries + 1} failed: ${err.message}`),
+      onFailedAttempt: (err) => {
+        this.logger.warn(`[${elem.url}] attempt=${err.attemptNumber}/${retries + 1} failed: ${err.message}`);
+        this.anonymous.thereWasException();
+      },
     });
     // Parse
     const patent = await GooglePatentParser.parse({ ...result, url: elem.url });

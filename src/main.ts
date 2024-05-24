@@ -1,4 +1,3 @@
-import '@total-typescript/ts-reset';
 import { NestFactory } from '@nestjs/core';
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
@@ -20,4 +19,4 @@ async function bootstrap() {
   console.log(`App is successfully launched on port ${AppConfig.port}`);
 }
 
-bootstrap();
+bootstrap().catch(console.error);

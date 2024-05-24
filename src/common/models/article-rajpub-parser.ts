@@ -1,6 +1,6 @@
 import { uniq } from 'lodash-es';
 import { parse as parseHtml, type HTMLElement } from 'node-html-parser';
-import type { Article, ArticleParsed } from '../../store/article-store/article.types.js';
+import type { ArticleEntity, ArticleParsed } from '../../store/article-store/article.types.js';
 
 export class ArticleRajpubParser implements ArticleParsed {
   private readonly select = {
@@ -32,15 +32,15 @@ export class ArticleRajpubParser implements ArticleParsed {
     };
   }
 
-  public get title(): Article['title'] {
+  public get title(): ArticleEntity['title'] {
     return this.#html.querySelector(this.select.title)?.structuredText.clean();
   }
 
-  public get journalName(): Article['journalName'] {
+  public get journalName(): ArticleEntity['journalName'] {
     return this.#html.querySelector(this.select.journalName)?.structuredText?.clean();
   }
 
-  public get authors(): Article['authors'] {
+  public get authors(): ArticleEntity['authors'] {
     const orgs = this.organizations;
     return this.#html.querySelectorAll(this.select.authors).map(li => {
       const org = li.querySelector('span.affiliation')?.structuredText.clean();
@@ -51,22 +51,22 @@ export class ArticleRajpubParser implements ArticleParsed {
     });
   }
 
-  public get organizations(): Article['organizations'] {
+  public get organizations(): ArticleEntity['organizations'] {
     return uniq(this.#html.querySelectorAll(this.select.organizations).map(org => org.structuredText.clean()));
   }
 
-  public get date(): Article['date'] {
+  public get date(): ArticleEntity['date'] {
     // Example: "2024-04-12"
     return this.#html.querySelector(this.select.date)?.structuredText.clean();
   }
 
-  public get abstract(): Article['abstract'] {
+  public get abstract(): ArticleEntity['abstract'] {
     const abstractBlock = this.#html.querySelector(this.select.abstract);
     const paragraph = abstractBlock?.querySelector('p')?.structuredText.trim();
     return paragraph || abstractBlock?.structuredText.trim().replace(/^Abstract\n/, '').trim();
   }
 
-  public get pdfUrl(): Article['pdfUrl'] {
+  public get pdfUrl(): ArticleEntity['pdfUrl'] {
     return this.#html.querySelector(this.select.pdfAnchor)?.getAttribute('href')?.trim();
   }
 }

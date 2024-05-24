@@ -1,6 +1,6 @@
 import os from 'node:os';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { PrismaService } from './prisma/prisma.service.js';
+import { PrismaService } from './store/prisma.service.js';
 
 @Resolver()
 export class AppResolver {

@@ -11,6 +11,7 @@ export class YandexSearchUrl extends URL {
     pageFrom: 1,
     perPage: 500,
     concurrent: 3,
+    isIgnoreExisting: true,
   } as const satisfies Partial<YandexSearchInput & YandexSearchSettings>;
 
   private readonly keys = {

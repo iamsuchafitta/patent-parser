@@ -1,3 +1,4 @@
+import type { NodeClickHouseClientConfigOptions } from '@clickhouse/client/dist/config.js';
 import { values } from 'lodash-es';
 import { EnvModeEnum } from './env-mode.enum.js';
 import { joi } from './joi-configured.js';
@@ -14,7 +15,8 @@ interface IConfig {
     controlPort: number;
     ports: number[];
   };
-  databaseUrl: string;
+  pgUrl: string;
+  clickhouse: NodeClickHouseClientConfigOptions;
 }
 
 class AppConfigClass implements IConfig {
@@ -22,7 +24,8 @@ class AppConfigClass implements IConfig {
   public readonly port: IConfig['port'];
   public readonly concurrent: IConfig['concurrent'];
   public readonly proxy: IConfig['proxy'];
-  public readonly databaseUrl: IConfig['databaseUrl'];
+  public readonly pgUrl: IConfig['pgUrl'];
+  public readonly clickhouse: IConfig['clickhouse'];
 
   constructor() {
     const config = this.validateEnv();
@@ -40,7 +43,13 @@ class AppConfigClass implements IConfig {
       controlPort: +config.PROXY_CONTROL_PORT,
       ports: config.PROXY_PORTS,
     };
-    this.databaseUrl = config.DATABASE_URL;
+    this.pgUrl = config.DATABASE_URL;
+    this.clickhouse = {
+      url: config.CH_URL,
+      username: config.CH_USERNAME,
+      password: config.CH_PASSWORD,
+      database: config.CH_DATABASE,
+    };
   }
 
   private validateEnv() {
@@ -57,6 +66,10 @@ class AppConfigClass implements IConfig {
       PROXY_CONTROL_PORT: joi.number().port().required(),
       PROXY_PORTS: joi.string().pattern(/^(\d{4,5},)*\d{4,5}$/).required(),
       DATABASE_URL: joi.string().uri().required(),
+      CH_URL: joi.string().required(),
+      CH_USERNAME: joi.string().required(),
+      CH_PASSWORD: joi.string().allow('').required(),
+      CH_DATABASE: joi.string().required(),
     }).validate(process.env);
     if (error) {
       throw new Error(`Config validation error: ${error.message}`);

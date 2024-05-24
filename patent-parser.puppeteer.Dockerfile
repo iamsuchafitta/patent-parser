@@ -17,6 +17,7 @@ RUN apk add --no-cache \
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
+COPY ./package*.json .
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD true
 ENV PUPPETEER_EXECUTABLE_PATH "/usr/bin/chromium-browser"
 CMD ["node", "dist/main.js"]

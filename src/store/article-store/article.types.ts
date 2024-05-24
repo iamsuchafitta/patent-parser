@@ -1,9 +1,7 @@
 import type { SetOptional } from 'type-fest';
 import type { Nillable, Optional } from '../../types/types.js';
 
-export type ArticleCreateInput = SetOptional<Article, 'createdAt' | 'updatedAt'>
-export type ArticleParsed = Pick<Article, 'title' | 'journalName' | 'authors' | 'organizations' | 'date' | 'abstract' | 'pdfUrl'>;
-export type Article = {
+export type ArticleEntity = {
   url: string
   title: Nillable<string>
   journalName: Nillable<string>
@@ -12,10 +10,12 @@ export type Article = {
     organizations: Nillable<number[]>
   }[]>
   organizations: Optional<string[]>
-  date: Nillable<string>
+  date: Nillable<string> // YYYY-MM-DD
   abstract: Nillable<string>
   pdfUrl: Nillable<string>
 
-  createdAt: Date
-  updatedAt: Date
+  parsedAt: Date
 }
+
+export type ArticleCreateInput = SetOptional<ArticleEntity, 'parsedAt'>
+export type ArticleParsed = Pick<ArticleEntity, 'title' | 'journalName' | 'authors' | 'organizations' | 'date' | 'abstract' | 'pdfUrl'>;

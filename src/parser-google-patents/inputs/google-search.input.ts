@@ -37,8 +37,8 @@ export class GoogleSearchInput {
   @Field(() => [GoogleSearchLanguageEnum], { nullable, defaultValue: _DEFAULT.languages })
   languages?: GoogleSearchLanguageEnum[] = _DEFAULT.languages;
 
-  @Field(() => GoogleSearchStatusEnum, { nullable, defaultValue: _DEFAULT.status })
-  status?: GoogleSearchStatusEnum = _DEFAULT.status;
+  @Field(() => GoogleSearchStatusEnum, { nullable })
+  status?: GoogleSearchStatusEnum;
 
   @Field(() => GoogleSearchTypeEnum, { nullable, defaultValue: _DEFAULT.type })
   type?: GoogleSearchTypeEnum = _DEFAULT.type;

@@ -13,7 +13,7 @@ export function pShouldRetry(abortController?: AbortController) {
     const tooManyRequests = err.response?.status === HttpStatus.TOO_MANY_REQUESTS;
     const serviceUnavailable = err.response?.status === HttpStatus.SERVICE_UNAVAILABLE;
     const isProxyTimeout = /Proxy connection timed out|Socks5 proxy rejected connection - Failure|socket hang up/i.test(err.message)
-     || /net::ERR_CONNECTION_CLOSED|net::ERR_SOCKS_CONNECTION_FAILED|net::ERR_SOCKET_NOT_CONNECTED/i.test(err.message);
+     || /net::ERR_TIMED_OUT|net::ERR_CONNECTION_CLOSED|net::ERR_SOCKS_CONNECTION_FAILED|net::ERR_SOCKET_NOT_CONNECTED/i.test(err.message);
     const doRetry = isTimeout || tooManyRequests || serviceUnavailable || isProxyTimeout;
     if (!doRetry/* && !(err instanceof CanceledError)*/ && !abortController?.signal.aborted) {
       abortController?.abort(err.message);

@@ -6,7 +6,7 @@ import type { PatentGoogleTempCreateInput } from '../store/patent-google-store/p
 
 export const nullable = true;
 
-export function clearDeepUndefinedAndEmptyArrays<T extends object>(v: T) {
+export function omitEmptyStructures<T extends object>(v: T) {
   return omitDeepBy(v, function (v: any) {
     return isUndefined(v)
       || v?.length === 0

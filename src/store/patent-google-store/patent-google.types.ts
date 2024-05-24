@@ -1,26 +1,18 @@
 import type { PartialOnUndefinedDeep } from 'type-fest';
 import type { Nillable, Optional } from '../../types/types.js';
 
-export type PatentGoogleCreateInput = PartialOnUndefinedDeep<PatentGoogle>
-export type PatentGoogleTempCreateInput = PartialOnUndefinedDeep<PatentGoogleTemp>
-
-export type PatentGoogleTemp = Pick<
-  PatentGoogle,
-  | 'id' | 'title' | 'assignee' | 'inventorOrAuthor'
-  | 'priorityDate' | 'filingOrCreationDate'
-  | 'publicationDate' | 'grantDate'
-  | 'url'
->
+export type PatentGoogleCreateInput = PartialOnUndefinedDeep<PatentGoogleEntity>
+export type PatentGoogleTempCreateInput = PatentGoogleTempEntity
 
 export type PatentGoogleParsed = Pick<
-  PatentGoogle,
+  PatentGoogleEntity,
   | 'id' | 'url' | 'title'
   | 'abstract' | 'description'
   | 'claims' | 'classifications' | 'relations'
   | 'applicationEvents' | 'concepts'
 >
 
-export type PatentGoogle = {
+export type PatentGoogleEntity = {
   id: string
   url: string
   title: Nillable<string>
@@ -62,8 +54,16 @@ export type PatentGoogle = {
   }[]>
 }
 
-export type PatentGoogleRelations = NonNullable<PatentGoogle['relations']>
-export type PatentGoogleClassification = NonNullable<PatentGoogle['classifications']>[number]
-export type PatentGoogleClaim = NonNullable<PatentGoogle['claims']>[number]
-export type PatentGoogleConcept = NonNullable<PatentGoogle['concepts']>[number]
-export type PatentGoogleApplicationEvent = NonNullable<PatentGoogle['applicationEvents']>[number]
+export type PatentGoogleRelations = NonNullable<PatentGoogleEntity['relations']>
+export type PatentGoogleClassification = NonNullable<PatentGoogleEntity['classifications']>[number]
+export type PatentGoogleClaim = NonNullable<PatentGoogleEntity['claims']>[number]
+export type PatentGoogleConcept = NonNullable<PatentGoogleEntity['concepts']>[number]
+export type PatentGoogleApplicationEvent = NonNullable<PatentGoogleEntity['applicationEvents']>[number]
+
+export type PatentGoogleTempEntity = Pick<
+  PatentGoogleEntity,
+  | 'id' | 'title' | 'assignee' | 'inventorOrAuthor'
+  | 'priorityDate' | 'filingOrCreationDate'
+  | 'publicationDate' | 'grantDate'
+  | 'url'
+>

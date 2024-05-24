@@ -12,6 +12,7 @@ import { IoffeJournalsOfArticlesEnum } from './enums/ioffe-journals-of-articles.
 import { AnonymousService } from '../anonymous/anonymous.service.js';
 import { pShouldRetry } from '../common/p-should-retry.js';
 import { nullable } from '../common/utils.js';
+import { ArticleStore } from '../store/article-store/article.store.js';
 import { QueueStore } from '../store/queue-store/queue.store.js';
 import { QueueElementTypeEnum } from '../store/queue-store/queue.types.js';
 
@@ -23,6 +24,7 @@ export class ParserArticlesResolver {
   constructor(
     private readonly anonymous: AnonymousService,
     private readonly queueStore: QueueStore,
+    private readonly articleStore: ArticleStore,
   ) {}
 
   @Mutation(() => GraphQLJSON, {
@@ -33,6 +35,7 @@ export class ParserArticlesResolver {
       type: () => [IoffeJournalsOfArticlesEnum],
       defaultValue: values(IoffeJournalsOfArticlesEnum),
     }) journalIds: IoffeJournalsOfArticlesEnum[],
+    @Args('isIgnoreExisting', { defaultValue: true, description: 'Игнорировать уже существующие статьи в БД' }) isIgnoreExisting: boolean,
     @Args('yearFrom', { nullable, type: () => GraphQLPositiveInt, description: 'С года' }) yearFrom?: number,
     @Args('yearTo', { nullable, type: () => GraphQLPositiveInt, description: 'До года (включительно)' }) yearTo?: number,
     @Args('limit', { nullable, type: () => GraphQLPositiveInt }) limit?: number,
@@ -58,7 +61,7 @@ export class ParserArticlesResolver {
         retries,
         shouldRetry: pShouldRetry(abortController),
         signal: abortController.signal,
-        onFailedAttempt: (err) => this.logger.warn(`${LogName} Journal [${journalUrl}] attempt=${err.attemptNumber}/${retries + 1} Error: name=${err.name} msg=${err.message}`),
+        onFailedAttempt: (err) => this.logger.warn(`${LogName} Journal [${journalUrl}] attempt=${err.attemptNumber}/${retries + 1} failed: ${err.message}`),
       }).then(parseHtml);
       logger(`${LogName} Journal ${++completed}/${journalUrls.length} Done!`);
       return journalsPage;
@@ -91,32 +94,36 @@ export class ParserArticlesResolver {
       retries,
       shouldRetry: pShouldRetry(abortController),
       signal: abortController.signal,
-      onFailedAttempt: (err) => this.logger.warn(`${LogName} Issue [${issueUrl}] attempt=${err.attemptNumber}/${retries + 1} Error: name=${err.name} msg=${err.message}`),
+      onFailedAttempt: (err) => this.logger.warn(`${LogName} Issue [${issueUrl}] attempt=${err.attemptNumber}/${retries + 1} failed: ${err.message}`),
     }), { concurrency: 20, signal: abortController.signal });
     completed = 0;
     logger.flush();
     /**
      * Парсинг ссылок на статьи со страниц выпусков
      */
-    const articlesUrls = flow(
+    let articlesUrls = flow(
       () => issuesPages.flatMap(page => page.querySelectorAll('div.issue_art div.issue_art_title a')),
       articlesAnchors => articlesAnchors.map(a => a.getAttribute('href')),
       issuesUrls => issuesUrls.filter(Boolean),
       issuesHrefs => issuesHrefs.map(href => href && `${domain}${(href)}`),
-      urls => urls.slice(0, limit),
     )();
+    const articlesFound = articlesUrls.length;
+    articlesUrls = await flow(
+      urls => urls.slice(0, limit),
+      urls => isIgnoreExisting ? this.articleStore.filterNotExisting(urls) : urls,
+    )(articlesUrls);
     /**
      * Добавление статей в очередь
      */
-    const enqueued = await this.queueStore.queueCreateMany(articlesUrls.map(url => ({
+    const articlesEnqueued = await this.queueStore.queueCreateMany(articlesUrls.map(url => ({
       type: QueueElementTypeEnum.ArticleRU,
       url,
     })));
     const response = {
       journals: journalsPages.length,
       issues: issuesPages.length,
-      articles: articlesUrls.length,
-      articlesEnqueued: enqueued,
+      articlesFound,
+      articlesEnqueued,
     };
     this.logger.log(`${LogName} Finished: ${util.inspect(response)}`);
     return response;
@@ -130,6 +137,7 @@ export class ParserArticlesResolver {
       type: () => [RajpubJournalsOfArticlesEnum],
       defaultValue: values(RajpubJournalsOfArticlesEnum),
     }) journalIds: RajpubJournalsOfArticlesEnum[],
+    @Args('isIgnoreExisting', { defaultValue: true, description: 'Игнорировать уже существующие статьи в БД' }) isIgnoreExisting: boolean,
     @Args('yearFrom', { nullable, type: () => GraphQLPositiveInt, description: 'С года' }) yearFrom?: number,
     @Args('yearTo', { nullable, type: () => GraphQLPositiveInt, description: 'До года (включительно)' }) yearTo?: number,
     @Args('limit', { nullable, type: () => GraphQLPositiveInt }) limit?: number,
@@ -147,7 +155,7 @@ export class ParserArticlesResolver {
       retries,
       shouldRetry: pShouldRetry(abortController),
       signal: abortController.signal,
-      onFailedAttempt: (err) => this.logger.warn(`${LogName} Journal [${pageUrl}] attempt=${err.attemptNumber}/${retries + 1} Error: name=${err.name} msg=${err.message}`),
+      onFailedAttempt: (err) => this.logger.warn(`${LogName} Journal [${pageUrl}] attempt=${err.attemptNumber}/${retries + 1} failed: ${err.message}`),
     }).then(parseHtml);
     /**
      * Первичный запрос на страницы журналов с парсингом ссылок выпусков + определением количества страниц.
@@ -182,14 +190,14 @@ export class ParserArticlesResolver {
     /**
      * Парсинг ссылок на статьи со страниц выпусков
      */
-    const articlesUrls = await pMap(issuesUrls, async issueUrl => {
+    let articlesUrls = await pMap(issuesUrls, async issueUrl => {
       const html = await pRetry(async () => await this.anonymous.axios.get<string>(issueUrl, {
         signal: abortController.signal,
       }).then(res => res.data), {
         retries,
         shouldRetry: pShouldRetry(abortController),
         signal: abortController.signal,
-        onFailedAttempt: (err) => this.logger.warn(`${LogName} Issue ${issueUrl} attempt=${err.attemptNumber}/${retries + 1} Error: name=${err.name} msg=${err.message}`),
+        onFailedAttempt: (err) => this.logger.warn(`${LogName} Issue ${issueUrl} attempt=${err.attemptNumber}/${retries + 1} failed: ${err.message}`),
       }).then(parseHtml);
       logger(`${LogName} Issue request ${++completed}/${issuesUrls.length} done!`);
       // Example: Published: 2016-07-30
@@ -198,12 +206,17 @@ export class ParserArticlesResolver {
         return html.querySelectorAll('ul.articles h3.title a').map(a => a.getAttribute('href')).filter(Boolean);
       }
       return [];
-    }, { concurrency: 20, signal: abortController.signal }).then(flatten).then(urls => urls.slice(0, limit));
+    }, { concurrency: 20, signal: abortController.signal }).then(flatten);
     completed = 0;
     logger.flush();
     /**
      * Добавление статей в очередь
      */
+    const articlesFound = articlesUrls.length;
+    articlesUrls = await flow(
+      urls => urls.slice(0, limit),
+      urls => isIgnoreExisting ? this.articleStore.filterNotExisting(urls) : urls,
+    )(articlesUrls);
     const articlesEnqueued = await this.queueStore.queueCreateMany(articlesUrls.map(url => ({
       type: QueueElementTypeEnum.ArticleEN,
       url,
@@ -211,7 +224,7 @@ export class ParserArticlesResolver {
     const response = {
       journals: journalIds.length,
       issues: issuesUrls.length,
-      articles: articlesUrls.length,
+      articlesFound,
       articlesEnqueued,
     };
     this.logger.log(`${LogName} Finished: ${util.inspect(response)}`);

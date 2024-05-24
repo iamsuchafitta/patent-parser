@@ -7,11 +7,14 @@ type Query {
 }
 
 type Mutation {
-  enqueueGooglePatents(input: GoogleSearchInput! = {dateIntervalType: Publication, languages: [Russian], status: Application, type: Patent}, settings: GoogleSearchSettingsInput! = {splitDateIntervalByDays: 21}): JSON!
+  enqueueGooglePatents(input: GoogleSearchInput! = {dateIntervalType: Publication, languages: [Russian]}, settings: GoogleSearchSettingsInput! = {splitDateIntervalByDays: 21, isIgnoreExisting: true}): JSON!
 
   """Добавление RU статей в очередь на парсинг с сайта journals.ioffe.ru"""
   enqueueArticlesRU(
     journalIds: [IoffeJournalsOfArticlesEnum!]! = [SolidBodyPhysics, PhysicsAndSemiconductorsTechnique, TechnicalPhysics, LettersToTechnicalPhysics, OpticsAndSpectroscopy]
+
+    """Игнорировать уже существующие статьи в БД"""
+    isIgnoreExisting: Boolean! = true
 
     """С года"""
     yearFrom: PositiveInt
@@ -25,6 +28,9 @@ type Mutation {
   enqueueArticlesEN(
     journalIds: [RajpubJournalsOfArticlesEnum!]! = [InternationalJournalOfComputersAndTechnology, JournalOfAdvancesInLinguistics, JournalOfAdvancesInMathematics, JournalOfAdvancesInAgriculture, JournalOfAdvancesInChemistry, JournalOfSocialScienceResearch, JournalOfAdvancesInPhysics, JournalOfAdvancesInBiotechnology, InternationalJournalOfManagementAndInformationTechnology, JournalOfAdvancesInBiology, InternationalJournalOfResearchInEducationMethodology, JournalOfAdvancesInNaturalSciences]
 
+    """Игнорировать уже существующие статьи в БД"""
+    isIgnoreExisting: Boolean! = true
+
     """С года"""
     yearFrom: PositiveInt
 
@@ -32,7 +38,7 @@ type Mutation {
     yearTo: PositiveInt
     limit: PositiveInt
   ): JSON!
-  enqueueYandexPatents(input: YandexSearchInput! = {orderBy: Newest, types: [Patent], countries: [RussianFederation, SovietUnion], dateIntervalType: PublicationDate, parserSettings: {perPage: 500, maxCount: 9007199254740991, pageFrom: 1, pageTo: 9007199254740991, concurrent: 3}}): JSON!
+  enqueueYandexPatents(input: YandexSearchInput! = {orderBy: Newest, types: [Patent], countries: [RussianFederation, SovietUnion], dateIntervalType: PublicationDate, parserSettings: {perPage: 500, pageFrom: 1, concurrent: 3, isIgnoreExisting: true}}): JSON!
 }
 
 """
@@ -53,8 +59,8 @@ input GoogleSearchInput {
   assignee: [String!]
   countries: [GoogleSearchCountryEnum!]
   languages: [GoogleSearchLanguageEnum!] = [Russian]
-  status: GoogleSearchStatusEnum = Application
-  type: GoogleSearchTypeEnum = Patent
+  status: GoogleSearchStatusEnum
+  type: GoogleSearchTypeEnum
   litigation: GoogleSearchLitigationEnum
 }
 
@@ -286,6 +292,9 @@ input GoogleSearchSettingsInput {
   Результат поиска делится на временные маленькие интервалы, так как Google урезает результаты на больших интервалах
   """
   splitDateIntervalByDays: PositiveInt = 21
+
+  """Игнорировать существующие патенты в БД"""
+  isIgnoreExisting: Boolean! = true
 }
 
 """Integers that will have a value greater than 0."""
@@ -354,7 +363,7 @@ input YandexSearchInput {
   dateTo: GQLDateDotted
 
   """Настройки парсинга результатов"""
-  parserSettings: YandexSearchSettings! = {perPage: 500, maxCount: 9007199254740991, pageFrom: 1, pageTo: 9007199254740991, concurrent: 3}
+  parserSettings: YandexSearchSettings! = {perPage: 500, pageFrom: 1, concurrent: 3, isIgnoreExisting: true}
 }
 
 enum YandexSearchOrderByEnum {
@@ -392,16 +401,19 @@ input YandexSearchSettings {
   perPage: PositiveInt! = 500
 
   """Усечь до кол-ва патентов"""
-  maxCount: PositiveInt! = 9007199254740991
+  maxCount: PositiveInt
 
   """Начиная со страницы"""
   pageFrom: NonNegativeInt! = 1
 
   """Заканчивая страницей (включительно)"""
-  pageTo: PositiveInt! = 9007199254740991
+  pageTo: PositiveInt
 
   """Кол-во параллельных запросов"""
   concurrent: PositiveInt! = 3
+
+  """Игнорировать существующие патенты в БД"""
+  isIgnoreExisting: Boolean! = true
 }
 
 """Integers that will have a value of 0 or more."""
