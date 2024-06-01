@@ -1,6 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
-import { QueueElementTypeEnum } from '@prisma/client';
 import { Mutex } from 'async-mutex';
 import { shallowEqual } from 'fast-equals';
 import { values, sum, fromPairs, keys, flow, throttle } from 'lodash-es';
@@ -11,7 +10,7 @@ import { ArticleRajpubService } from '../parser-articles/article-rajpub.service.
 import { ParserGooglePatentsService } from '../parser-google-patents/parser-google-patents.service.js';
 import { ParserYandexPatentsService } from '../parser-yandex-patents/parser-yandex-patents.service.js';
 import { QueueStore } from '../store/queue-store/queue.store.js';
-import type { QueueElement } from '../store/queue-store/queue.types.js';
+import { type QueueElement, QueueElementTypeEnum } from '../store/queue-store/queue.types.js';
 
 @Injectable()
 export class QueueHandlerService implements OnModuleInit {

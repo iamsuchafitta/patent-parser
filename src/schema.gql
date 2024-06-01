@@ -7,7 +7,8 @@ type Query {
 }
 
 type Mutation {
-  enqueueGooglePatents(input: GoogleSearchInput! = {dateIntervalType: Publication, languages: [Russian]}, settings: GoogleSearchSettingsInput! = {splitDateIntervalByDays: 21, isIgnoreExisting: true}): JSON!
+  enqueueGooglePatents(input: GoogleSearchInput! = {dateIntervalType: Publication, languages: [Russian], type: Patent}, settings: GoogleSearchSettingsInput! = {splitDateIntervalByDays: 21, isIgnoreExisting: true}): JSON!
+  enqueueGooglePatentsByCsv(csvUrl: String!, isIgnoreExisting: Boolean! = true, limit: Float): JSON!
 
   """Добавление RU статей в очередь на парсинг с сайта journals.ioffe.ru"""
   enqueueArticlesRU(
@@ -60,7 +61,7 @@ input GoogleSearchInput {
   countries: [GoogleSearchCountryEnum!]
   languages: [GoogleSearchLanguageEnum!] = [Russian]
   status: GoogleSearchStatusEnum
-  type: GoogleSearchTypeEnum
+  type: GoogleSearchTypeEnum = Patent
   litigation: GoogleSearchLitigationEnum
 }
 

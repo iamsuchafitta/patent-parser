@@ -20,4 +20,18 @@ export class AppResolver {
     }
     return message;
   }
+
+  // @Query(() => GraphQLJSON)
+  // async export() {
+  //   const data = await clickhouseClient.query({
+  //     // language=ClickHouse
+  //     query: 'SELECT * FROM patent_google',
+  //     format: 'JSONEachRow',
+  //   }).then(data => data.json<PatentGoogleEntity>());
+  //   await fs.mkdir('dev-utils/temp/results/jsons', { recursive: true });
+  //   await Promise.all(data.map(async (row) => {
+  //     await fs.writeFile(`dev-utils/temp/results/jsons/${row.id}.json`, JSON.stringify(omitEmptyStructures(row)));
+  //   }));
+  //   return data.length;
+  // }
 }

@@ -18,7 +18,6 @@ export class GooglePatentParser implements PatentGoogleParsed {
     Title: 'h1#title',
     Abstract: 'div.abstract',
     Description: 'div.description-paragraph',
-    Claims: 'div.claims>div',
     Classifications: 'classification-tree.classification-viewer>div>div>div>div:not([hidden])',
     ClassificationId: 'state-modifier',
     ClassificationDescription: '.description',
@@ -75,12 +74,14 @@ export class GooglePatentParser implements PatentGoogleParsed {
   }
 
   get claims(): PatentGoogleClaim[] {
-    return this.#html.querySelectorAll(this.select.Claims)
-      .map((el, i) => ({
-        index: i,
-        text: el.innerText.clean(),
-        isDependent: el.classList.contains('claim-dependent'),
-      }));
+    const claimsV1 = this.#html.querySelectorAll('div.claims>div');
+    const claimsV2 = this.#html.querySelectorAll('ol.claims>li');
+    const claimsElements = claimsV1.length > claimsV2.length ? claimsV1 : claimsV2;
+    return claimsElements.map((el, i) => ({
+      index: i,
+      text: el.innerText.structuredClean(),
+      isDependent: el.classList.contains('claim-dependent'),
+    })).filter(claim => Boolean(claim.text));
   }
 
   get classifications(): PatentGoogleClassification[] {

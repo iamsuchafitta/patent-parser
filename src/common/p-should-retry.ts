@@ -1,6 +1,6 @@
 import util from 'node:util';
 import { HttpStatus } from '@nestjs/common';
-import { type AxiosError } from 'axios';
+import { type AxiosError, CanceledError } from 'axios';
 import type { FailedAttemptError } from 'p-retry';
 import { TimeoutError, PuppeteerError } from 'puppeteer';
 
@@ -15,7 +15,7 @@ export function pShouldRetry(abortController?: AbortController) {
     const isProxyTimeout = /Proxy connection timed out|Socks5 proxy rejected connection - Failure|socket hang up/i.test(err.message)
      || /net::ERR_TIMED_OUT|net::ERR_CONNECTION_CLOSED|net::ERR_SOCKS_CONNECTION_FAILED|net::ERR_SOCKET_NOT_CONNECTED/i.test(err.message);
     const doRetry = isTimeout || tooManyRequests || serviceUnavailable || isProxyTimeout;
-    if (!doRetry/* && !(err instanceof CanceledError)*/ && !abortController?.signal.aborted) {
+    if (!doRetry && !(err instanceof CanceledError) && !abortController?.signal.aborted) {
       abortController?.abort(err.message);
       // Log will help to know how to add an uncaught error to the retry:
       console.error(`[${err?.request?.url}] Should not be retried! ErrorInfo: ${util.inspect({

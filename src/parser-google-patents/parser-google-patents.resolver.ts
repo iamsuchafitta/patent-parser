@@ -10,7 +10,7 @@ import { GoogleSearchInput } from './inputs/google-search.input.js';
 import { AnonymousService } from '../anonymous/anonymous.service.js';
 import { GoogleSearchUrl } from '../common/models/google-search-url.js';
 import { pShouldRetry } from '../common/p-should-retry.js';
-import { parseGooglePatentSearchCSV } from '../common/utils.js';
+import { parseGooglePatentSearchCSV, nullable } from '../common/utils.js';
 import { PatentGoogleStore } from '../store/patent-google-store/patent-google.store.js';
 import { QueueStore } from '../store/queue-store/queue.store.js';
 import { QueueElementTypeEnum } from '../store/queue-store/queue.types.js';
@@ -63,6 +63,43 @@ export class ParserGooglePatentsResolver {
       type: QueueElementTypeEnum.GooglePatent,
     })));
     const response = { searchParts: searchUrls.length, patentsFound, patentsEnqueued };
+    this.logger.log(`Finished: ${util.inspect(response)}`);
+    return response;
+  }
+
+  @Mutation(() => GraphQLJSON)
+  async enqueueGooglePatentsByCsv(
+    @Args('csvUrl') csvUrl: string,
+    @Args('isIgnoreExisting', { defaultValue: true }) isIgnoreExisting: boolean,
+    @Args('limit', { nullable }) limit?: number,
+  ) {
+    this.logger.log(`enqueueGooglePatentsByCsv(${csvUrl}, isIgnoreExisting=${isIgnoreExisting}, limit=${limit})`);
+    const csvString = await pRetry(async () => {
+      return await this.anonymous.axios.get<string>(csvUrl).then((res) => res.data);
+    }, {
+      retries: 19,
+      shouldRetry: pShouldRetry(),
+      minTimeout: 10e3,
+      maxTimeout: 30e3,
+      randomize: true,
+      onFailedAttempt: (err) => this.logger.warn(`[${csvUrl}] attempt=${err.attemptNumber}/${err.attemptNumber + err.retriesLeft} failed: ${err.message}`),
+    });
+    let results = await parseGooglePatentSearchCSV(csvString);
+    const patentsFound = results.length;
+    if (limit) {
+      results = results.slice(0, limit);
+    }
+    if (isIgnoreExisting) {
+      const urls = results.map(({ url }) => url);
+      const filtered = await this.patentGoogleStore.filterNotExisting(urls);
+      results = results.filter(({ url }) => filtered.includes(url));
+    }
+    await this.patentGoogleStore.patentTempCreateMany(results);
+    const patentsEnqueued = await this.queueStore.queueCreateMany(results.map(({ url }) => ({
+      url: url,
+      type: QueueElementTypeEnum.GooglePatent,
+    })));
+    const response = { patentsFound, patentsEnqueued };
     this.logger.log(`Finished: ${util.inspect(response)}`);
     return response;
   }
