@@ -1,5 +1,7 @@
 import os from 'node:os';
-import { Args, Query, Resolver } from '@nestjs/graphql';
+import { Query, Resolver } from '@nestjs/graphql';
+import { GraphQLJSON } from 'graphql-scalars';
+import { clickhouseClient } from './store/clickhouse-client.js';
 import { PrismaService } from './store/prisma.service.js';
 
 @Resolver()
@@ -9,16 +11,26 @@ export class AppResolver {
   /**
    * Health check query.
    */
-  @Query(() => String)
-  async healthz(
-    @Args('db', { type: () => Boolean, nullable: true }) dbCheck: boolean,
-  ): Promise<string> {
-    let message = `alive on ${os.hostname()}`;
-    if (dbCheck) {
-      const isOk = await this.prisma.$queryRaw<[{ check: boolean }]>`SELECT 1 + 1 = 2 "check"`.then((rows) => rows[0].check);
-      message += `, db=${isOk}`;
-    }
-    return message;
+  @Query(() => GraphQLJSON)
+  async healthz(): Promise<unknown> {
+    const res: Record<string, unknown> = { aliveOn: os.hostname() };
+
+    [res.postgres, res.clickhouse] = await Promise.all([
+
+      this.prisma.$queryRaw<[{ check: unknown }]>`SELECT 1 + 1 = 2 "check"`
+        .then((rows) => rows[0].check === true ? 'ready' : 'ERROR')
+        .catch(() => 'ERROR'),
+
+      clickhouseClient.query({
+        query: 'SELECT (1 + 1 = 2)::Boolean "check"',
+        format: 'JSONEachRow',
+      }).then((data) => data.json<{ check: unknown }>())
+        .then((rows) => rows[0].check === true ? 'ready' : 'ERROR')
+        .catch(() => 'ERROR'),
+
+    ]);
+
+    return res;
   }
 
   // @Query(() => GraphQLJSON)
